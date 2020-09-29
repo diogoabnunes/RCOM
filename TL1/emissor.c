@@ -6,6 +6,10 @@
 #include <termios.h>
 #include <stdio.h>
 
+#include <string.h>
+#include <stdlib.h>
+#include <unistd.h>
+
 #define BAUDRATE B38400
 #define MODEMDEVICE "/dev/ttyS1"
 #define _POSIX_SOURCE 1 /* POSIX compliant source */
