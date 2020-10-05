@@ -24,9 +24,9 @@ int main(int argc, char** argv)
     char buf[255];
 
     if ( (argc < 2) || 
-  	     ((strcmp("/dev/ttyS0", argv[1])!=0) && 
-  	      (strcmp("/dev/ttyS1", argv[1])!=0) )) {
-      printf("Usage:\tnserial SerialPort\n\tex: nserial /dev/ttyS1\n");
+  	     ((strcmp("/dev/ttyS10", argv[1])!=0) && 
+  	      (strcmp("/dev/ttyS11", argv[1])!=0) )) {
+      printf("Usage:\tnserial SerialPort\n\tex: nserial /dev/ttyS11\n");
       exit(1);
     }
 
@@ -74,17 +74,41 @@ int main(int argc, char** argv)
 
     printf("New termios structure set\n");
 
+    /*
+    - lê os caracteres (um a um) da porta série, em modo não canónico, até receber o caracter de fim
+        de string (‘\0’);
+    - imprime a string com printf("%s\n", ...).
+    - reenvia a a string recebida do Emissor, escrevendo os caracteres respectivos (incluindo ‘\0’) na
+        porta série (ver Emissor).
+    */
+    char reply[255];
+    int i = 0;
+    while (STOP==FALSE) {
+      res = read(fd, buf, 1);
+      buf[res] = 0;
+      if (buf[0] == '\n') {
+        STOP = TRUE;
+        continue;
+      }
+      printf("%s\n", buf);
+      reply[i] = buf[0];
+      i++;
+    }
+    reply[strlen(reply)] = '\0';
+    size_t size = strlen(reply);
 
-    while (STOP==FALSE) {       /* loop for input */
-      res = read(fd,buf,255);   /* returns after 5 chars have been input */
-      buf[res]=0;               /* so we can printf... */
+    printf("Sending message: %s\n", reply);
+    res = write(fd, reply, size);
+    printf("%d bytes written\n", res);
+
+    /*
+    while (STOP==FALSE) {       // loop for input
+      res = read(fd,buf,255);   // returns after 5 chars have been input
+      buf[res]=0;               // so we can printf
       printf(":%s:%d\n", buf, res);
       if (buf[0]=='z') STOP=TRUE;
     }
 
-
-
-  /* 
     O ciclo WHILE deve ser alterado de modo a respeitar o indicado no gui�o 
   */
 

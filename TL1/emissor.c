@@ -26,9 +26,9 @@ int main(int argc, char** argv)
     int i, sum = 0, speed = 0;
     
     if ( (argc < 2) || 
-  	     ((strcmp("/dev/ttyS0", argv[1])!=0) && 
-  	      (strcmp("/dev/ttyS1", argv[1])!=0) )) {
-      printf("Usage:\tnserial SerialPort\n\tex: nserial /dev/ttyS1\n");
+  	     ((strcmp("/dev/ttyS10", argv[1])!=0) && 
+  	      (strcmp("/dev/ttyS11", argv[1])!=0) )) {
+      printf("Usage:\tnserial SerialPort\n\tex: nserial /dev/ttyS11\n");
       exit(1);
     }
 
@@ -77,22 +77,44 @@ int main(int argc, char** argv)
     printf("New termios structure set\n");
 
 
+  /*
+  TO DO
+  - lê uma linha do stdin.
+      sugestão: utilizar a função gets() para obter a linha do stdin;
+  - determina número de caracteres até ‘\0’;
+  - escreve na porta série os caracteres lidos usando a configuração em modo não canónico (incluir
+        o ‘\0’ para indicar o fim da transmissão ao receptor);
+  - lê da porta série (ver Receptor) a string que deve ter sido reenviada pelo Receptor.
+  */
+  
+  // Leitura
+  printf("Input: ");
+  fgets(buf, 255, stdin);
+  printf("Message written: %s\n", buf);
+  size_t size = strlen(buf);
 
+  // Escrita na porta série
+  res = write(fd, buf, size);
+  printf("%d bytes written\n", res);
+
+  // Leitura do sinal reenviado pelo recetor
+  char reply[255];
+  res = read(fd, reply, 255);
+  printf("Message received: %s\n", reply);
+
+  /*
     for (i = 0; i < 255; i++) {
       buf[i] = 'a';
     }
     
-    /*testing*/
     buf[25] = '\n';
     
     res = write(fd,buf,255);   
     printf("%d bytes written\n", res);
  
-
-  /* 
-    O ciclo FOR e as instru��es seguintes devem ser alterados de modo a respeitar 
-    o indicado no gui�o 
-  */
+    O ciclo FOR e as instruções seguintes devem ser alterados de modo a respeitar 
+    o indicado no guião 
+    */
 
 
 
