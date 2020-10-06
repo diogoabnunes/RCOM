@@ -90,6 +90,7 @@ int main(int argc, char** argv)
   // Leitura
   printf("Input: ");
   fgets(buf, 255, stdin);
+  buf[strlen(buf)] = '\0';
   printf("Message written: %s\n", buf);
   size_t size = strlen(buf);
 
