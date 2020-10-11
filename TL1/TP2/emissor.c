@@ -10,6 +10,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include "macros.h"
+
 #define BAUDRATE B38400
 #define MODEMDEVICE "/dev/ttyS1"
 #define _POSIX_SOURCE 1 /* POSIX compliant source */
@@ -73,45 +75,25 @@ int main(int argc, char** argv)
 
   printf("New termios structure set\n");
 
-  /*
-  TO DO
-  - lê uma linha do stdin.
-      sugestão: utilizar a função gets() para obter a linha do stdin;
-  - determina número de caracteres até ‘\0’;
-  - escreve na porta série os caracteres lidos usando a configuração em modo não canónico (incluir
-      o ‘\0’ para indicar o fim da transmissão ao receptor);
-  - lê da porta série (ver Receptor) a string que deve ter sido reenviada pelo Receptor.
-  */
-  
-  // Leitura
-  printf("Input: ");
-  fgets(buf, 255, stdin);
-  buf[strlen(buf)] = '\0';
-  printf("Message written: %s\n", buf);
-  size_t size = strlen(buf);
+  buf[0] = FLAG;
+  buf[1] = A_EmiRec;
+  buf[2] = C_SET;
+  buf[3] = BCC(A_EmiRec, C_SET);
+  buf[4] = FLAG;
 
-  // Escrita na porta série
-  res = write(fd, buf, size);
+  res = write(fd, buf, SET_UA_SIZE);
   printf("%d bytes written\n", res);
 
-  // Leitura do sinal reenviado pelo recetor
-  char reply[255];
-  res = read(fd, reply, 255);
-  printf("Message received: %s\n", reply);
+  i = 0;
+  while (STOP == FALSE) {
+    res = read(fd, buf, 1);
+    
+    printf("nº bytes lido: %d - ", res);
+    printf("content: %#4.2x\n", buf[0]);
+    i++;
 
-  /*
-  for (i = 0; i < 255; i++) {
-    buf[i] = 'a';
+    if (i == SET_UA_SIZE) STOP=TRUE;
   }
-    
-  buf[25] = '\n';
-    
-  res = write(fd,buf,255);   
-  printf("%d bytes written\n", res);
- 
-  O ciclo FOR e as instruções seguintes devem ser alterados de modo a respeitar 
-  o indicado no guião 
-  */
    
   if ( tcsetattr(fd,TCSANOW,&oldtio) == -1) {
     perror("tcsetattr");

@@ -10,12 +10,49 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include "macros.h"
+
 #define BAUDRATE B38400
 #define _POSIX_SOURCE 1 /* POSIX compliant source */
 #define FALSE 0
 #define TRUE 1
 
 volatile int STOP=FALSE;
+
+void checkState(enum SET_UA_StateMachine *state, char *checkBuf, char byte) {
+  printf("A:%#4.2x C:%#4.2x \n", checkBuf[0], checkBuf[1]);
+  switch(*state) {
+    
+    case START:
+      if (byte == FLAG)
+        *state = FLAG_RCV;
+      break;
+    
+    case FLAG_RCV:
+      if (byte = A_EmiRec) {
+        *state = A_RCV;
+        checkBuf[0] = byte; // A
+      }
+      break;
+
+    case A_RCV:
+      if (byte = C_SET) {
+        *state = C_RCV;
+        checkBuf[1] = byte; // C
+      }
+      break;
+
+    case C_RCV:
+      break;
+
+    case BCC_OK:
+      // A e C
+      break;
+
+    case SM_STOP:
+      break;
+  }
+}
 
 int main(int argc, char** argv)
 {
@@ -68,43 +105,30 @@ int main(int argc, char** argv)
 
   printf("New termios structure set\n");
 
-  /*
-  - lê os caracteres (um a um) da porta série, em modo não canónico, até receber o caracter de fim
-      de string (‘\0’);
-  - imprime a string com printf("%s\n", ...).
-  - reenvia a a string recebida do Emissor, escrevendo os caracteres respectivos (incluindo ‘\0’) na
-      porta série (ver Emissor).
-  */
-  char reply[255];
+  char reply[255], check[255];
   int i = 0;
+  enum SET_UA_StateMachine state = START;
+
   while (STOP==FALSE) {
     res = read(fd, buf, 1);
-    buf[res] = 0;
-    if (buf[0] == '\n') {
-      STOP = TRUE;
-      continue;
-    }
-    printf("%s\n", buf);
-    reply[i] = buf[0];
+    
+    printf("nº bytes lido: %d - ", res);
+    printf("content: %#4.2x\n", buf[0]);
+    
+    checkState(&state, check, buf[0]);
     i++;
-  }
-  reply[strlen(reply)] = '\0';
-  size_t size = strlen(reply);
 
-  printf("Sending message: %s\n", reply);
-  res = write(fd, reply, size);
-  printf("%d bytes written\n", res);
-
-  /*
-  while (STOP==FALSE) {       // loop for input
-    res = read(fd,buf,255);   // returns after 5 chars have been input
-    buf[res]=0;               // so we can printf
-    printf(":%s:%d\n", buf, res);
-    if (buf[0]=='z') STOP=TRUE;
+    if (i == SET_UA_SIZE) STOP = TRUE;
   }
 
-  O ciclo WHILE deve ser alterado de modo a respeitar o indicado no gui�o 
-  */
+  reply[0] = FLAG;
+  reply[1] = A_EmiRec;
+  reply[2] = C_UA;
+  reply[3] = BCC(A_EmiRec, C_UA);
+  reply[4] = FLAG;
+
+  res = write(fd, reply, SET_UA_SIZE);
+  print("%d bytes written\n", res);
 
   tcsetattr(fd,TCSANOW,&oldtio);
   close(fd);
