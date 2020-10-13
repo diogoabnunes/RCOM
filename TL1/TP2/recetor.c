@@ -148,7 +148,7 @@ int main(int argc, char** argv)
   reply[4] = FLAG;
 
   res = write(fd, reply, SET_UA_SIZE);
-  print("%d bytes written\n", res);
+  printf("%d bytes written\n", res);
 
   tcsetattr(fd,TCSANOW,&oldtio);
   close(fd);
