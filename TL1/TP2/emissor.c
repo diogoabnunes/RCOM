@@ -9,6 +9,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <signal.h>
 
 #include "macros.h"
 
@@ -19,6 +20,68 @@
 #define TRUE 1
 
 volatile int STOP=FALSE;
+
+enum stateMachine state;
+int fail = FALSE;
+
+void atende() {
+  if (state != SM_STOP) fail = TRUE;
+}
+
+void checkState(enum stateMachine *state, char *checkBuf, char byte) {
+  printf("A:%#4.2x C:%#4.2x \n", checkBuf[0], checkBuf[1]);
+  switch(*state) {
+    
+    case START:
+      if (byte == FLAG)
+        *state = FLAG_RCV;
+      break;
+    
+    case FLAG_RCV:
+      if (byte = A_EmiRec) {
+        *state = A_RCV;
+        checkBuf[0] = byte; // A
+      }
+      break;
+
+    case A_RCV:
+      if (byte = C_UA) {
+        *state = C_RCV;
+        checkBuf[1] = byte; // C
+      }
+      else if (byte == FLAG) {
+        *state = FLAG_RCV;
+      }
+      else {
+        *state = START;
+      }
+      break;
+
+    case C_RCV:
+      if (byte == BCC(checkBuf[0], checkBuf[1])) {
+        *state = BCC_OK;
+      }
+      else if (byte == FLAG) {
+        *state = FLAG_RCV;
+      }
+      else {
+        *state = START;
+      }
+      break;
+
+    case BCC_OK:
+      if (byte == FLAG) {
+        *state = SM_STOP;
+      }
+      else {
+        *state = START;
+      }
+      break;
+
+    case SM_STOP:
+      break;
+  }
+}
 
 int main(int argc, char** argv)
 {
@@ -75,24 +138,48 @@ int main(int argc, char** argv)
 
   printf("New termios structure set\n");
 
+  // Instala rotina que atende interrupção
+  (void) signal(SIGALRM, atende);
+
+  // Coloca no buf a mensagem SET necessária 
+  // para enviar ao recetor
   buf[0] = FLAG;
   buf[1] = A_EmiRec;
   buf[2] = C_SET;
   buf[3] = BCC(A_EmiRec, C_SET);
   buf[4] = FLAG;
 
-  res = write(fd, buf, SET_UA_SIZE);
-  printf("%d bytes written\n", res);
+  int num_try = 0;
+  state = START;
 
-  i = 0;
-  while (STOP == FALSE) {
-    res = read(fd, buf, 1);
+  // Envio de mensagem SET para o recetor
+  // Se não ultrapassou o número de tentativas
+  // e ainda não recebeu corretamente a 
+  // mensagem UA do recetor
+  while (num_try < NUM_TRIES || fail == TRUE) {
+    num_try += 1;
+    fail = FALSE;
+
+    // Tentativa de enviar mensagem SET
+    res = write(fd, buf, SET_UA_SIZE);
+    printf("%d bytes written\n", res);
+
+    alarm(3);
+
+    state = START;
+    char checkBuf[2];
     
-    printf("nº bytes lido: %d - ", res);
-    printf("content: %#4.2x\n", buf[0]);
-    i++;
+    // Leitura da resposta UA do recetor
+    while (STOP == FALSE) {
+      res = read(fd, buf, 1);
+    
+      printf("nº bytes lido: %d - ", res);
+      printf("conteúdo: %#4.2x\n", buf[0]);
+      
+      checkState(&state, checkBuf, buf[0]);
 
-    if (i == SET_UA_SIZE) STOP=TRUE;
+      if (state == SM_STOP || fail) STOP=TRUE;
+    }
   }
    
   if ( tcsetattr(fd,TCSANOW,&oldtio) == -1) {

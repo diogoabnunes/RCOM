@@ -1,4 +1,4 @@
-enum SET_UA_StateMachine {
+enum stateMachine {
     START,
     FLAG_RCV,
     A_RCV,
@@ -6,6 +6,8 @@ enum SET_UA_StateMachine {
     BCC_OK,
     SM_STOP
 };
+
+#define NUM_TRIES 3
 
 #define SET_UA_SIZE 5
 

@@ -19,7 +19,7 @@
 
 volatile int STOP=FALSE;
 
-void checkState(enum SET_UA_StateMachine *state, char *checkBuf, char byte) {
+void checkState(enum stateMachine *state, char *checkBuf, char byte) {
   printf("A:%#4.2x C:%#4.2x \n", checkBuf[0], checkBuf[1]);
   switch(*state) {
     
@@ -40,13 +40,33 @@ void checkState(enum SET_UA_StateMachine *state, char *checkBuf, char byte) {
         *state = C_RCV;
         checkBuf[1] = byte; // C
       }
+      else if (byte == FLAG) {
+        *state = FLAG_RCV;
+      }
+      else {
+        *state = START;
+      }
       break;
 
     case C_RCV:
+      if (byte == BCC(checkBuf[0], checkBuf[1])) {
+        *state = BCC_OK;
+      }
+      else if (byte == FLAG) {
+        *state = FLAG_RCV;
+      }
+      else {
+        *state = START;
+      }
       break;
 
     case BCC_OK:
-      // A e C
+      if (byte == FLAG) {
+        *state = SM_STOP;
+      }
+      else {
+        *state = START;
+      }
       break;
 
     case SM_STOP:
@@ -105,22 +125,22 @@ int main(int argc, char** argv)
 
   printf("New termios structure set\n");
 
-  char reply[255], check[255];
-  int i = 0;
-  enum SET_UA_StateMachine state = START;
+  char reply[255], check[2];
+  enum stateMachine state = START;
 
+  // Receção da mensagem do emissor
   while (STOP==FALSE) {
     res = read(fd, buf, 1);
     
     printf("nº bytes lido: %d - ", res);
-    printf("content: %#4.2x\n", buf[0]);
+    printf("conteúdo: %#4.2x\n", buf[0]);
     
     checkState(&state, check, buf[0]);
-    i++;
 
-    if (i == SET_UA_SIZE) STOP = TRUE;
+    if (state == SM_STOP) STOP = TRUE;
   }
 
+  // Resposta do recetor
   reply[0] = FLAG;
   reply[1] = A_EmiRec;
   reply[2] = C_UA;
