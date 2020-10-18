@@ -25,10 +25,13 @@ enum stateMachine state;
 int fail = FALSE;
 
 void atende() {
-  if (state != SM_STOP) fail = TRUE;
+  if (state != SM_STOP) {
+    printf("Emissor não recebeu resposta do recetor!\n");
+    fail = TRUE;
+  }
 }
 
-void checkState(enum stateMachine *state, char *checkBuf, char byte) {
+void checkState(enum stateMachine *state, unsigned char *checkBuf, char byte) {
   printf("A:%#4.2x C:%#4.2x \n", checkBuf[0], checkBuf[1]);
   switch(*state) {
     
@@ -38,14 +41,14 @@ void checkState(enum stateMachine *state, char *checkBuf, char byte) {
       break;
     
     case FLAG_RCV:
-      if (byte = A_EmiRec) {
+      if (byte == A_EmiRec) {
         *state = A_RCV;
         checkBuf[0] = byte; // A
       }
       break;
 
     case A_RCV:
-      if (byte = C_UA) {
+      if (byte == C_UA) {
         *state = C_RCV;
         checkBuf[1] = byte; // C
       }
@@ -85,9 +88,10 @@ void checkState(enum stateMachine *state, char *checkBuf, char byte) {
 
 int main(int argc, char** argv)
 {
+  printf("RCOM - EMISSOR\n\n");
   int fd,c, res;
   struct termios oldtio,newtio;
-  char buf[255];
+  unsigned char buf[255];
   int i, sum = 0, speed = 0;
     
   if ( (argc < 2) || ((strcmp("/dev/ttyS10", argv[1])!=0) && 
@@ -126,7 +130,7 @@ int main(int argc, char** argv)
 
   /* 
   VTIME e VMIN devem ser alterados de forma a proteger com um temporizador a 
-  leitura do(s) pr�ximo(s) caracter(es)
+  leitura do(s) próximo(s) caracter(es)
   */
 
   tcflush(fd, TCIOFLUSH);
@@ -139,7 +143,11 @@ int main(int argc, char** argv)
   printf("New termios structure set\n");
 
   // Instala rotina que atende interrupção
-  (void) signal(SIGALRM, atende);
+  struct sigaction sa;
+  sigemptyset(&sa.sa_mask);
+  sa.sa_handler = atende;
+  sa.sa_flags = 0;
+  sigaction(SIGALRM, &sa, NULL);
 
   // Coloca no buf a mensagem SET necessária 
   // para enviar ao recetor
@@ -167,7 +175,7 @@ int main(int argc, char** argv)
     alarm(3);
 
     state = START;
-    char checkBuf[2];
+    unsigned char checkBuf[2];
     
     // Leitura da resposta UA do recetor
     while (STOP == FALSE) {
@@ -178,7 +186,7 @@ int main(int argc, char** argv)
       
       checkState(&state, checkBuf, buf[0]);
 
-      if (state == SM_STOP || fail) STOP=TRUE;
+      if (state == SM_STOP || fail) STOP = TRUE;
     }
   }
    

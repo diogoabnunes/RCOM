@@ -19,7 +19,7 @@
 
 volatile int STOP=FALSE;
 
-void checkState(enum stateMachine *state, char *checkBuf, char byte) {
+void checkState(enum stateMachine *state, unsigned char *checkBuf, char byte) {
   printf("A:%#4.2x C:%#4.2x \n", checkBuf[0], checkBuf[1]);
   switch(*state) {
     
@@ -29,14 +29,14 @@ void checkState(enum stateMachine *state, char *checkBuf, char byte) {
       break;
     
     case FLAG_RCV:
-      if (byte = A_EmiRec) {
+      if (byte == A_EmiRec) {
         *state = A_RCV;
         checkBuf[0] = byte; // A
       }
       break;
 
     case A_RCV:
-      if (byte = C_SET) {
+      if (byte == C_SET) {
         *state = C_RCV;
         checkBuf[1] = byte; // C
       }
@@ -76,9 +76,10 @@ void checkState(enum stateMachine *state, char *checkBuf, char byte) {
 
 int main(int argc, char** argv)
 {
+  printf("RCOM - RECETOR\n\n");
   int fd,c, res;
   struct termios oldtio,newtio;
-  char buf[255];
+  unsigned char buf[255];
 
   if ( (argc < 2) || ((strcmp("/dev/ttyS10", argv[1])!=0) && 
   	                  (strcmp("/dev/ttyS11", argv[1])!=0) )) {
@@ -125,7 +126,7 @@ int main(int argc, char** argv)
 
   printf("New termios structure set\n");
 
-  char reply[255], check[2];
+  unsigned char reply[255], check[2];
   enum stateMachine state = START;
 
   // Receção da mensagem do emissor
