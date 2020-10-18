@@ -76,7 +76,7 @@ void checkState(enum stateMachine *state, unsigned char *checkBuf, char byte) {
 
 int main(int argc, char** argv)
 {
-  printf("RCOM - RECETOR\n\n");
+  printf("\n\n\nRECETOR\n\n");
   int fd,c, res;
   struct termios oldtio,newtio;
   unsigned char buf[255];

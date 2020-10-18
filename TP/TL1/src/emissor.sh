@@ -6,5 +6,3 @@ if gcc emissor.c -o -Wall emissor; then
 else
 echo "COMPILATION ERROR";
 fi
-
-rm emissor

@@ -1,9 +1,9 @@
 #!/bin/sh
 
-# corre num novo terminal o socat
-gnome-terminal --window-with-profile=RCOM_socat -- sudo socat -d  -d  PTY,link=/dev/ttyS10,mode=777   PTY,link=/dev/ttyS11,mode=777
-# tempo para dar input
-sleep 5
+gnome-terminal --window-with-profile=RCOM_socat -- sudo ./cable
+
+echo "Sleeping for 10sec waiting for sudo password...";
+sleep 10
 
 cd src
 make -s

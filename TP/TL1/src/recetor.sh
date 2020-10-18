@@ -6,5 +6,3 @@ if gcc recetor.c -o -Wall recetor; then
 else
 echo "COMPILATION ERROR";
 fi
-
-rm recetor
