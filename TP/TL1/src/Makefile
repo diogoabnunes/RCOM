@@ -10,10 +10,10 @@ all: emissor recetor
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 emissor: $(OBJ)
-	$(CC) $(CFLAGS) -o $@ $@.c $(OBJ) -lm
+	$(CC) $(CFLAGS) -o $@ $@.c $(OBJ)
 
 recetor: $(OBJ)
-	$(CC) $(CFLAGS) -o $@ $@.c $(OBJ) -lm
+	$(CC) $(CFLAGS) -o $@ $@.c $(OBJ)
 
 clean:
 	@rm $(TARGETS)
