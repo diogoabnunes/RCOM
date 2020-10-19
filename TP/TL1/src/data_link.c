@@ -95,7 +95,7 @@ int emissor_SET(int fd) {
     fail = FALSE;
 
     // Tentativa de enviar mensagem SET
-    res = write(fd, readBuf, SET_UA_SIZE);
+    res = write(fd, buf, SET_UA_SIZE);
     printf("%d bytes written\n", res);
 
     alarm(3);
@@ -104,12 +104,12 @@ int emissor_SET(int fd) {
     
     // Leitura da resposta UA do recetor
     while (STOP == FALSE) {
-      res = read(fd, buf, 1);
+      res = read(fd, readBuf, 1);
     
       printf("nº bytes lido: %d - ", res);
       printf("conteúdo: %#4.2x\n", buf[0]);
       
-      stateMachine_SET_UA(&state, checkBuf, buf[0], EMISSOR);
+      stateMachine_SET_UA(&state, checkBuf, readBuf[0], EMISSOR);
 
       if (state == SM_STOP || fail) STOP = TRUE;
     }
