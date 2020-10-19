@@ -10,6 +10,7 @@
 #include <strings.h>
 #include <unistd.h>
 #include <signal.h>
+#include <string.h>
 
 #include "macros.h"
 
@@ -24,8 +25,11 @@
 void stateMachine_SET_UA(enum stateMachine *state, unsigned char *checkBuf, char byte, int type);
 void atende();
 
+int emissor_SET(int fd);
+int recetor_UA(int fd);
+
 void llinit(int *fd, char *port);
-int llopen(int port, int type);
+int llopen(char *port, int type);
 int llwrite(int fd, char *buffer, int length);
 int llread(int fd, char *buffer);
 int llclose(int fd);

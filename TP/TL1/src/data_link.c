@@ -73,14 +73,91 @@ void atende() {
   }
 }
 
+void setting_alarm_handler() {
+
+}
+
+int emissor_SET(int fd) {
+  volatile int STOP=FALSE;
+
+  unsigned char buf[SET_UA_SIZE], readBuf[SET_UA_SIZE], checkBuf[2];
+  int res;
+  int num_try = 0;
+
+  buf[0] = FLAG;
+  buf[1] = A_EmiRec;
+  buf[2] = C_SET;
+  buf[3] = BCC(A_EmiRec, C_SET);
+  buf[4] = FLAG;
+
+  while (num_try < NUM_TRIES || fail == TRUE) {
+    num_try += 1;
+    fail = FALSE;
+
+    // Tentativa de enviar mensagem SET
+    res = write(fd, readBuf, SET_UA_SIZE);
+    printf("%d bytes written\n", res);
+
+    alarm(3);
+
+    state = START;
+    
+    // Leitura da resposta UA do recetor
+    while (STOP == FALSE) {
+      res = read(fd, buf, 1);
+    
+      printf("nº bytes lido: %d - ", res);
+      printf("conteúdo: %#4.2x\n", buf[0]);
+      
+      stateMachine_SET_UA(&state, checkBuf, buf[0], EMISSOR);
+
+      if (state == SM_STOP || fail) STOP = TRUE;
+    }
+  }
+
+  return fd;
+}
+
+int recetor_UA(int fd) {
+  volatile int STOP=FALSE;
+
+  unsigned char buf[SET_UA_SIZE], checkBuf[2], reply[SET_UA_SIZE];
+  int res;
+
+  state = START;
+
+  while (STOP==FALSE) {
+    res = read(fd, buf, 1);
+    
+    printf("nº bytes lido: %d - ", res);
+    printf("conteúdo: %#4.2x\n", buf[0]);
+    
+    stateMachine_SET_UA(&state, checkBuf, buf[0], RECETOR);
+
+    if (state == SM_STOP) STOP = TRUE;
+  }
+
+  // Resposta do recetor
+  reply[0] = FLAG;
+  reply[1] = A_EmiRec;
+  reply[2] = C_UA;
+  reply[3] = BCC(A_EmiRec, C_UA);
+  reply[4] = FLAG;
+
+  res = write(fd, reply, SET_UA_SIZE);
+  printf("%d bytes written\n", res);
+
+  return fd;
+}
+
 void llinit(int *fd, char *port) {
 
-    fd = open(port, O_RDWR | O_NOCTTY );
+    *fd = open(port, O_RDWR | O_NOCTTY );
     if (fd <0) {perror(port); exit(-1); }
 
     struct termios newtio;
 
-    if ( tcgetattr(fd,&oldtio) == -1) { /* save current port settings */
+    if ( tcgetattr(*fd,&oldtio) == -1) { /* save current port settings */
     perror("tcgetattr");
     exit(-1);
     }
@@ -96,9 +173,9 @@ void llinit(int *fd, char *port) {
     newtio.c_cc[VTIME]    = 0;   /* inter-character timer unused */
     newtio.c_cc[VMIN]     = 1;   /* blocking read until 5 chars received */
 
-    tcflush(fd, TCIOFLUSH);
+    tcflush(*fd, TCIOFLUSH);
 
-    if ( tcsetattr(fd,TCSANOW,&newtio) == -1) {
+    if ( tcsetattr(*fd,TCSANOW,&newtio) == -1) {
         perror("tcsetattr");
         exit(-1);
     }
@@ -106,20 +183,20 @@ void llinit(int *fd, char *port) {
     printf("New termios structure set\n");
 }
 
-int llopen(int port, int flag) {
-    // llinit();
-    // Instala rotina que atende interrupção
-    struct sigaction sa;
-    sigemptyset(&sa.sa_mask);
-    sa.sa_handler = atende;
-    sa.sa_flags = 0;
-    sigaction(SIGALRM, &sa, NULL);
-    // mensagens SET and UA
-    switch (flag) {
-        case EMISSOR: break;
-        case RECETOR: break;
-    }
-    return 0;
+int llopen(char *port, int flag) {
+  // llinit();
+  int fd;
+  llinit(&fd, port);
+
+  // Instala rotina que atende interrupção
+  setting_alarm_handler();
+
+  // mensagens SET and UA
+  switch (flag) {
+      case EMISSOR: emissor_SET(fd); break;
+      case RECETOR: recetor_UA(fd); break;
+  }
+  return 0;
 }
 
 int llwrite(int fd, char *buffer, int length) {

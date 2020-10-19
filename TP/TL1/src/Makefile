@@ -1,19 +1,18 @@
 CC = gcc
 CFLAGS = -Wall
 DEPS = macros.h
-OBJ = 
-TARGETS = emissor recetor
+OBJ = data_link.c
+TARGETS = app
 
-all: emissor recetor
+all: app
 
 %.o: %.c $(DEPS)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-emissor: $(OBJ)
-	$(CC) $(CFLAGS) -o $@ $@.c $(OBJ)
-
-recetor: $(OBJ)
+app: $(OBJ)
 	$(CC) $(CFLAGS) -o $@ $@.c $(OBJ)
 
 clean:
 	@rm $(TARGETS)
+
+# gcc app.c data_link.c -o app

@@ -3,13 +3,23 @@
 int main(int argc, char** argv) {
     printf("Application\n");
 
-    /*
-     parseArgs(argc, argv, &x, &type) -> EMISSOR / RECETOR
-    fd = llopen(port, type);
+    if (argc != 3) {
+        printf("Usage: ./app emissor/recetor serialPort");
+        exit(1);
+    }
+    int type;
+    if      (strcmp("emissor", argv[1]) == 0) type = EMISSOR;
+    else if (strcmp("recetor", argv[1]) == 0) type = RECETOR;
+    else {
+        printf("Usage: ./app emissor/recetor serialPort");
+        exit(1);
+    }
+    char port[20];
+    strcpy(port, argv[2]);
 
-    char msg[] = "testing";
-    if (type == EMISSOR) llwrite(fd, msg, strlen(msg));
-    
+    int fd = llopen(port, type);
+
+    printf("Next\n");
     llclose(fd);
-    */
+    return 0;
 }
