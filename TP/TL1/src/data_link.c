@@ -4,6 +4,10 @@ struct termios oldtio;
 enum stateMachine state;
 int fail = FALSE;
 
+void print_0x(unsigned char a) {
+  printf("Conteúdo: %#4.2x\n" , a);
+}
+
 void stateMachine_SET_UA(enum stateMachine *state, unsigned char *checkBuf, char byte, int type) {
   printf("A:%#4.2x C:%#4.2x \n", checkBuf[0], checkBuf[1]);
   switch(*state) {
@@ -74,7 +78,11 @@ void atende() {
 }
 
 void setting_alarm_handler() {
-
+  struct sigaction sa;
+  sigemptyset(&sa.sa_mask);
+  sa.sa_handler = atende;
+  sa.sa_flags = 0;
+  sigaction(SIGALRM, &sa, NULL);
 }
 
 int emissor_SET(int fd) {
@@ -91,9 +99,10 @@ int emissor_SET(int fd) {
   buf[4] = FLAG;
 
   while (num_try < NUM_TRIES || fail == TRUE) {
-    num_try += 1;
+    num_try++;
     fail = FALSE;
 
+    printf("Emissor: Envio de mensagem SET\n");
     // Tentativa de enviar mensagem SET
     res = write(fd, buf, SET_UA_SIZE);
     printf("%d bytes written\n", res);
@@ -102,12 +111,12 @@ int emissor_SET(int fd) {
 
     state = START;
     
+    printf("Emissor: Receção de mensagem UA\n");
     // Leitura da resposta UA do recetor
     while (STOP == FALSE) {
       res = read(fd, readBuf, 1);
     
-      printf("nº bytes lido: %d - ", res);
-      printf("conteúdo: %#4.2x\n", buf[0]);
+      print_0x(buf[0]);
       
       stateMachine_SET_UA(&state, checkBuf, readBuf[0], EMISSOR);
 
@@ -126,11 +135,11 @@ int recetor_UA(int fd) {
 
   state = START;
 
+  printf("Recetor: Receção de mensagem SET\n");
   while (STOP==FALSE) {
     res = read(fd, buf, 1);
     
-    printf("nº bytes lido: %d - ", res);
-    printf("conteúdo: %#4.2x\n", buf[0]);
+    print_0x(buf[0]);
     
     stateMachine_SET_UA(&state, checkBuf, buf[0], RECETOR);
 
@@ -144,6 +153,7 @@ int recetor_UA(int fd) {
   reply[3] = BCC(A_EmiRec, C_UA);
   reply[4] = FLAG;
 
+  printf("Recetor: envio de mensagem UA\n");
   res = write(fd, reply, SET_UA_SIZE);
   printf("%d bytes written\n", res);
 
@@ -184,14 +194,11 @@ void llinit(int *fd, char *port) {
 }
 
 int llopen(char *port, int flag) {
-  // llinit();
   int fd;
   llinit(&fd, port);
 
-  // Instala rotina que atende interrupção
   setting_alarm_handler();
 
-  // mensagens SET and UA
   switch (flag) {
       case EMISSOR: emissor_SET(fd); break;
       case RECETOR: recetor_UA(fd); break;
@@ -200,8 +207,80 @@ int llopen(char *port, int flag) {
 }
 
 int llwrite(int fd, char *buffer, int length) {
-    // enviar tramas/frames
-    return 0;
+  volatile int STOP = FALSE;
+
+  unsigned char initBuf[4];
+  initBuf[0] = FLAG;
+  initBuf[1] = A_EmiRec;
+  initBuf[2] = C_I(1);
+  initBuf[3] = BCC(A_EmiRec, C_I(1));
+
+  unsigned char endBuf[2];
+  unsigned char BCC2 = buffer[0];
+  for (int i = 1; i < length; i++) {
+    BCC2 = BCC(BCC2, buffer[i]);
+  }
+  endBuf[0] = BCC2;
+  endBuf[1] = FLAG;
+
+  int size = length;
+  unsigned char *dataBuf = (unsigned char *) malloc(sizeof(char) * size);
+  for (int i = 0, j = 0; i < length; i++, j++) {
+    if (buffer[i] == 0x7E || buffer[i] == 0x7D) {
+      // Aumentar tamanho do buffer de dados
+      size++;
+      dataBuf = (unsigned char *) realloc(dataBuf, sizeof(char) * size);
+
+      // Stuffing
+      switch(buffer[i]) {
+        case 0x7E: {
+          dataBuf[j] = 0x7E;
+          dataBuf[j + 1] = XOR(buffer[i], 0x20); 
+          j++;
+          break;
+        }
+        case 0x7D: {
+          dataBuf[j] = 0x7D;
+          dataBuf[j + 1] = XOR(buffer[i], 0x20);
+          j++;
+          break;
+        }
+      }
+    }
+    else dataBuf[j] = buffer[i];
+  }
+
+  /* Trama completo */
+  unsigned char allBuf[4 + size + 2];
+  strcpy((char *)allBuf, (char *)initBuf);
+  strcpy((char *)allBuf, (char *)dataBuf);
+  strcpy((char *)allBuf, (char *)endBuf);
+
+  int num_try = 0, res;
+  while (num_try < NUM_TRIES && fail) {
+    num_try++;
+    fail = FALSE;
+
+    res = write(fd, allBuf, sizeof(allBuf));
+    printf("%d bytes written\n", res);
+
+    alarm(3);
+
+    unsigned char readBuf[255];
+    while (STOP == FALSE) {
+      res = read(fd, readBuf, 1);
+
+      printf("nº bytes lido: %d - ", res);
+      print_0x(readBuf[0]);
+
+      // TO DO : outra stateMachine 
+
+      if (fail) STOP = TRUE;
+    }
+
+  }
+
+  return 0;
 }
 
 int llread(int fd, char *buffer) {

@@ -22,9 +22,11 @@
 #define FALSE 0
 #define TRUE 1
 
+void print_0x(unsigned char a);
 void stateMachine_SET_UA(enum stateMachine *state, unsigned char *checkBuf, char byte, int type);
 void atende();
 
+void setting_alarm_handler();
 int emissor_SET(int fd);
 int recetor_UA(int fd);
 
