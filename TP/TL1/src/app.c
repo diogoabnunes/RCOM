@@ -28,11 +28,16 @@ int main(int argc, char** argv) {
     else printf("llopen() succeeded!\n");
 
     if (type == EMISSOR) llwrite(fd, "RCOM TEST", 9);
+    if (type == RECETOR) {
+        int size = llread(fd, "RCOM TEST");
+        printf("Size MSG: %d", size);
+    }
 
     if (llclose(fd) != 0) {
         printf("Error in llclose()...\n");
         exit(2);
     }
     else printf("llclose() succeeded!\n");
+
     return 0;
 }

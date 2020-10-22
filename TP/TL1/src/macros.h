@@ -25,6 +25,6 @@ enum stateMachine {
 
 #define C_UA 0b00000111 // 7
 
-#define C_RR(r) ((0b10000101) & (r) << (7)) // 0x05 | 0x85
-#define C_REJ(r) ((0b10000001) & (r) << (7)) // 0x01 | 0x81
-#define C_I(r) ((0b01000000) & (r) << (6)) // 0x00 | 0x40
+#define C_RR(r) ((0b10000101) ^ (r) << (7)) // 0x05 | 0x85
+#define C_REJ(r) ((0b10000001) ^ (r) << (7)) // 0x01 | 0x81
+#define C_I(r) ((0b01000000) ^ (r) << (6)) // 0x00 | 0x40
