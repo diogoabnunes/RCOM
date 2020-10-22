@@ -27,7 +27,8 @@ int main(int argc, char** argv) {
     }
     else printf("llopen() succeeded!\n");
 
-    if (type == EMISSOR) llwrite(fd, "RCOM TEST", 9);
+    unsigned char msg[9] = "RCOM TEST";
+    if (type == EMISSOR) llwrite(fd, msg, strlen(msg));
     if (type == RECETOR) {
         int size = llread(fd, "RCOM TEST");
         printf("Size MSG: %d", size);

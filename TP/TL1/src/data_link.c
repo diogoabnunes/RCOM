@@ -3,7 +3,7 @@
 struct termios oldtio;
 enum stateMachine state;
 int fail = FALSE;
-struct linkLayer linkLayer;
+struct linkLayer ll;
 
 void print_0x(unsigned char a) {
   printf("Conteúdo: %#4.2x\n" , a);
@@ -78,11 +78,11 @@ int stateMachine_Write(enum stateMachine *state, unsigned char byte) {
       break;
 
     case A_RCV:
-      if (byte == C_RR(linkLayer.sequenceNumber ^ 0x01)) {
+      if (byte == C_RR(ll.sequenceNumber ^ 0x01)) {
         *state = C_RCV;
         checkBuf[1] = byte;
       }
-      else if (byte == C_REJ(linkLayer.sequenceNumber ^ 0x01)) return 1;
+      else if (byte == C_REJ(ll.sequenceNumber ^ 0x01)) return 1;
       else if (byte == FLAG) *state = FLAG_RCV;
       else *state = START;
       break;
@@ -108,7 +108,7 @@ int stateMachine_Read(enum stateMachine *state, char byte, unsigned char **buf, 
   static int frameIndex;
   static unsigned char checkBuf[2];
 
-  linkLayer.frame[frameIndex] = byte;
+  ll.frame[frameIndex] = byte;
   switch(*state) {
     case START: {
       frameIndex = 0;
@@ -129,12 +129,12 @@ int stateMachine_Read(enum stateMachine *state, char byte, unsigned char **buf, 
     break;
 
     case A_RCV: 
-      if (byte == C_I(linkLayer.sequenceNumber)) {
+      if (byte == C_I(ll.sequenceNumber)) {
         *state = C_RCV;
         checkBuf[1] = byte;
         frameIndex++;
       }
-      else if (byte == C_I(linkLayer.sequenceNumber ^ 0x01)) return 1;
+      else if (byte == C_I(ll.sequenceNumber ^ 0x01)) return 1;
       else if (byte == FLAG) {
         *state = FLAG_RCV;
         frameIndex = 1;
@@ -163,11 +163,11 @@ int stateMachine_Read(enum stateMachine *state, char byte, unsigned char **buf, 
 
         // De-stuffing
         for (int i = 4; i < frameIndex - 2; i++) {
-          if (linkLayer.frame[i] != 0x7D || linkLayer.frame[i] != 0x7E) {
-            (*buf)[*bufSize] = linkLayer.frame[i];
+          if (ll.frame[i] != 0x7D || ll.frame[i] != 0x7E) {
+            (*buf)[*bufSize] = ll.frame[i];
           }
           else {
-            (*buf)[*bufSize] = linkLayer.frame[i + 1] ^ 0x20;
+            (*buf)[*bufSize] = ll.frame[i + 1] ^ 0x20;
             i++;
           }
           (*bufSize)++;
@@ -177,8 +177,8 @@ int stateMachine_Read(enum stateMachine *state, char byte, unsigned char **buf, 
         unsigned char BCC2 = *buf[0];
         for (int i = 1; i < *bufSize; i++) BCC2 = XOR(BCC2, *buf[i]);
 
-        if (linkLayer.frame[frameIndex - 2] == BCC2) {
-          linkLayer.sequenceNumber = XOR(linkLayer.sequenceNumber, 0x01);
+        if (ll.frame[frameIndex - 2] == BCC2) {
+          ll.sequenceNumber = XOR(ll.sequenceNumber, 0x01);
           *state = SM_STOP;
         }
         else return 1;
@@ -230,7 +230,7 @@ int emissor_SET(int fd) {
     res = write(fd, buf, SET_UA_SIZE);
     printf("%d bytes written\n", res);
 
-    alarm(linkLayer.timeout);
+    alarm(ll.timeout);
 
     state = START;
     
@@ -239,7 +239,7 @@ int emissor_SET(int fd) {
     while (STOP == FALSE) {
       res = read(fd, readBuf, 1);
       if (res == -1) {
-        if (num_try < linkLayer.numTransmissions) {
+        if (num_try < ll.numTransmissions) {
           fail = TRUE;
         }
         break;
@@ -251,7 +251,7 @@ int emissor_SET(int fd) {
 
       if (state == SM_STOP || fail) STOP = TRUE;
     }
-  } while (num_try < linkLayer.numTransmissions || fail);
+  } while (num_try < ll.numTransmissions || fail);
   
   alarm(0);
   if (fail) return 1;
@@ -302,11 +302,11 @@ int llinit(int *fd, char *port) {
     *fd = open(port, O_RDWR | O_NOCTTY );
     if (fd <0) {perror(port); exit(-1); }
 
-    strcpy(linkLayer.port, port);
-    linkLayer.baudRate = BAUDRATE;
-    linkLayer.sequenceNumber = 0x00;
-    linkLayer.timeout = 3;
-    linkLayer.numTransmissions = 3;
+    strcpy(ll.port, port);
+    ll.baudRate = BAUDRATE;
+    ll.sequenceNumber = 0x00;
+    ll.timeout = 3;
+    ll.numTransmissions = 3;
 
     struct termios newtio;
 
@@ -360,8 +360,8 @@ int llwrite(int fd, char *buffer, int length) {
   unsigned char initBuf[4];
   initBuf[0] = FLAG;
   initBuf[1] = A_EmiRec;
-  initBuf[2] = C_I(linkLayer.sequenceNumber);
-  initBuf[3] = BCC(A_EmiRec, C_I(linkLayer.sequenceNumber));
+  initBuf[2] = C_I(ll.sequenceNumber);
+  initBuf[3] = BCC(A_EmiRec, C_I(ll.sequenceNumber));
 
   unsigned char endBuf[2];
   unsigned char BCC2 = buffer[0];
@@ -430,14 +430,14 @@ int llwrite(int fd, char *buffer, int length) {
     if (res == -1) return 1;
     printf("%d bytes written\n", res);
 
-    alarm(linkLayer.timeout);
+    alarm(ll.timeout);
 
     unsigned char readBuf[255];
     while (STOP == FALSE) {
       res = read(fd, readBuf, 1);
 
       if (res == -1) {
-        if (num_try < linkLayer.numTransmissions) {
+        if (num_try < ll.numTransmissions) {
           fail = TRUE;
         }
         break;
@@ -448,9 +448,9 @@ int llwrite(int fd, char *buffer, int length) {
       if (state == SM_STOP || fail) STOP = TRUE;
     }
 
-  } while (num_try < linkLayer.numTransmissions && fail);
+  } while (num_try < ll.numTransmissions && fail);
   alarm(0);
-  linkLayer.sequenceNumber ^= 0x01;
+  ll.sequenceNumber ^= 0x01;
 
   return 0;
 }
@@ -472,11 +472,11 @@ int llread(int fd, char *buffer) {
       print_0x(buf[0]);
 
       if (stateMachine_Read(&state, buf[0], &dataBuf, &size) != 0) {
-        cValue = C_REJ(linkLayer.sequenceNumber);
+        cValue = C_REJ(ll.sequenceNumber);
         printf("C_REJ...\n");
         break;
       }
-      cValue = C_RR(linkLayer.sequenceNumber);
+      cValue = C_RR(ll.sequenceNumber);
       if (state == SM_STOP) STOP = TRUE;
     }
 
@@ -499,7 +499,7 @@ int llread(int fd, char *buffer) {
     res = write(fd, reply, 5);
     if (res == -1) return 1;
     
-    linkLayer.sequenceNumber = XOR(linkLayer.sequenceNumber, 0x01);
+    ll.sequenceNumber = XOR(ll.sequenceNumber, 0x01);
     free(dataBuf);
     return size;
 }
