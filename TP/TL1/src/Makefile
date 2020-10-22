@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS = -Wall
-DEPS = macros.h
+DEPS = 
 OBJ = data_link.c
 TARGETS = app
 

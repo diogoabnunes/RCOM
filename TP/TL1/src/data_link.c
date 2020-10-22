@@ -9,6 +9,7 @@ void print_0x(unsigned char a) {
   printf("Conteúdo: %#4.2x\n" , a);
 }
 
+
 void stateMachine_SET_UA(enum stateMachine *state, unsigned char *checkBuf, char byte, int type) {
   switch(*state) {
     
@@ -190,6 +191,7 @@ int stateMachine_Read(enum stateMachine *state, char byte, unsigned char **buf, 
   return 0; 
 }
 
+
 void atende() {
   if (state != SM_STOP) {
     printf("Emissor não recebeu resposta do recetor!\n");
@@ -197,6 +199,7 @@ void atende() {
     return;
   }
 }
+
 
 void setting_alarm_handler() {
   struct sigaction sa;
@@ -292,6 +295,7 @@ int recetor_UA(int fd) {
 
   return fd;
 }
+
 
 int llinit(int *fd, char *port) {
 
