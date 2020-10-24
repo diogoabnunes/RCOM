@@ -34,8 +34,8 @@ int main(int argc, char** argv) {
         printf("Size MSG: %d", size);
     }
     */
-   if (type == EMISSOR) printf("\nllwrite() to fix\n\n");
-   else if (type == RECETOR) printf("\nllread() to fix\n\n");
+    if (type == EMISSOR) printf("\nllwrite() to fix\n\n");
+    else if (type == RECETOR) printf("\nllread() to fix\n\n");
 
     if (llclose(fd) != 0) {
         printf("Erro em llclose()\n");

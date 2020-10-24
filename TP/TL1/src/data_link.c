@@ -387,7 +387,7 @@ int stateMachine_Read(char byte, unsigned char **buf, int *bufSize) {
   return 0; 
 }
 
-int llwrite(int fd, char *buffer, int length) {
+int llwrite(int fd, char *buffer, int length) {/*
   printf("A entrar em llwrite()\n");
   volatile int STOP = FALSE;
 
@@ -432,7 +432,6 @@ int llwrite(int fd, char *buffer, int length) {
     else dataBuf[j] = buffer[i];
   }
 
-  /* Trama completo */
   int allSize = 4 + size + 2, datai = 0, endi;
   unsigned char allBuf[allSize];
   for (int i = 0; i < allSize; i++) {
@@ -484,12 +483,12 @@ int llwrite(int fd, char *buffer, int length) {
 
   } while (num_try < ll.numTransmissions && fail);
   alarm(0);
-  ll.sequenceNumber = XOR(ll.sequenceNumber, 0x01);
+  ll.sequenceNumber = XOR(ll.sequenceNumber, 0x01);*/
 
   return 0;
 }
 
-int llread(int fd, char *buffer) {
+int llread(int fd, char *buffer) {/*
   printf("A entrar em llread()\n");
     
   unsigned char buf[1];
@@ -545,7 +544,8 @@ int llread(int fd, char *buffer) {
   }
   
   free(dataBuf);
-  return size;
+  return size;*/
+  return 0;
 }
 
 
