@@ -90,18 +90,18 @@ int emissor_SET(int fd) {
     res = write(fd, buf, SET_UA_SIZE);
     if (res == -1) {
       printf("emissor_SET(): Erro no envio de mensagem SET\n");
+      return 1;
     }
     else {
-      printf("Mensagem SET enviada: ");
+      printf("\nMensagem SET enviada: ");
       for (int i = 0; i < SET_UA_SIZE; i++) print_0x(buf[i]);
       printf("\n");
     }
 
     alarm(ll.timeout);
-
     state = START;
-    printf("\nMensagem UA recebida: ");
 
+    printf("\nMensagem UA recebida: ");
     while (STOP == FALSE) {
       res = read(fd, readBuf, 1);
       if (res == -1) {
@@ -164,7 +164,7 @@ int recetor_UA(int fd) {
     return 1;
   }
   else {
-    printf("\nMensagem UA enviada: ");
+    printf("Mensagem UA enviada: ");
     for (int i = 0; i < SET_UA_SIZE; i++) print_0x(reply[i]);
     printf("\n");
   }
@@ -568,6 +568,7 @@ int emissor_DISC(int fd) {
     res = write(fd, buf, SET_UA_SIZE);
     if (res == -1) {
       printf("emissor_DISC(): Erro no envio de mensagem DISC\n");
+      return 1;
     }
     else {
       printf("Mensagem DISC enviada: ");
@@ -576,10 +577,9 @@ int emissor_DISC(int fd) {
     }
 
     alarm(ll.timeout);
-
     state = START;
-    printf("\nMensagem DISC recebida: ");
 
+    printf("\nMensagem DISC recebida: ");
     while (STOP == FALSE) {
       res = read(fd, readBuf, 1);
       if (res == -1) {
@@ -601,18 +601,34 @@ int emissor_DISC(int fd) {
   alarm(0);
   if (fail) return 1;
 
+  unsigned char buf2[SET_UA_SIZE];
+  buf2[0] = FLAG;
+  buf2[1] = A_EmiRec;
+  buf2[2] = C_UA;
+  buf2[3] = BCC(A_EmiRec, C_UA);
+  buf2[4] = FLAG;
+  
+  res = write(fd, buf2, SET_UA_SIZE);
+  if (res == -1) {
+    printf("emissor_DISC(): Erro no envio de mensagem UA\n");
+    return 1;
+  }
+  else {
+    printf("Mensagem UA enviada: ");
+    for (int i = 0; i < SET_UA_SIZE; i++) print_0x(buf2[i]);
+    printf("\n");
+  }
+
   return fd;
 }
 
 int recetor_DISC(int fd) {
   volatile int STOP=FALSE;
-
   unsigned char buf[1];
   int res;
-
   state = START;
-  printf("\nMensagem DISC recebida: ");
 
+  printf("\nMensagem DISC recebida: ");
   while (STOP==FALSE) {
     res = read(fd, buf, 1);
     if (res == -1) {
@@ -632,7 +648,7 @@ int recetor_DISC(int fd) {
   unsigned char reply[5];
   reply[0] = FLAG;
   reply[1] = A_RecEmi;
-  reply[2] = C_UA;
+  reply[2] = C_DISC;
   reply[3] = BCC(A_RecEmi, C_DISC);
   reply[4] = FLAG;
 
@@ -647,7 +663,7 @@ int recetor_DISC(int fd) {
     printf("\n");
   }
 
-  sleep(3);
+  alarm(5);
   STOP = FALSE;
   state = START;
   unsigned char buf2[1];
