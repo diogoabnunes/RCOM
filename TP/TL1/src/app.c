@@ -1,7 +1,7 @@
 #include "data_link.h"
 
 int main(int argc, char** argv) {
-    printf("\n\n\nApplication\n");
+    printf("\n\n\nAplicação\n");
 
     if (argc != 3) {
         printf("Usage: ./app emissor/recetor serialPort");
@@ -20,24 +20,27 @@ int main(int argc, char** argv) {
     if (type == EMISSOR) printf("Emissor\n\n");
     else printf("Recetor\n\n");
 
+    
     int fd = llopen(port, type);
     if (fd == -1) {
         printf("Error in llopen()...\n");
         exit(2);
     }
-    else printf("llopen() succeeded!\n");
-
+    
+    /*
     if (type == EMISSOR) llwrite(fd, "RCOM TEST", strlen("RCOM TEST"));
     if (type == RECETOR) {
         int size = llread(fd, "RCOM TEST");
         printf("Size MSG: %d", size);
     }
+    */
+   if (type == EMISSOR) printf("\nllwrite() to fix\n\n");
+   else if (type == RECETOR) printf("\nllread() to fix\n\n");
 
     if (llclose(fd) != 0) {
-        printf("Error in llclose()...\n");
-        exit(2);
+        printf("Erro em llclose()\n");
+        exit(3);
     }
-    else printf("llclose() succeeded!\n");
 
     return 0;
 }

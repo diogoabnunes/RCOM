@@ -6,7 +6,10 @@ int fail = FALSE;
 struct linkLayer ll;
 
 void print_0x(unsigned char a) {
-  printf("Conteúdo: %#4.2x\n" , a);
+  if (a == 0) {
+    printf("0x00 "); return;
+  }
+  printf("%#4.2x " , a);
 }
 
 void atende() {
@@ -84,17 +87,21 @@ int emissor_SET(int fd) {
     num_try++;
     fail = FALSE;
 
-    printf("Emissor: Envio de mensagem SET\n");
-    // Tentativa de enviar mensagem SET
     res = write(fd, buf, SET_UA_SIZE);
-    printf("%d bytes written\n", res);
+    if (res == -1) {
+      printf("emissor_SET(): Erro no envio de mensagem SET\n");
+    }
+    else {
+      printf("Mensagem SET enviada: ");
+      for (int i = 0; i < SET_UA_SIZE; i++) print_0x(buf[i]);
+      printf("\n");
+    }
 
     alarm(ll.timeout);
 
     state = START;
-    
-    printf("Emissor: Receção de mensagem UA\n");
-    // Leitura da resposta UA do recetor
+    printf("\nMensagem UA recebida: ");
+
     while (STOP == FALSE) {
       res = read(fd, readBuf, 1);
       if (res == -1) {
@@ -104,13 +111,14 @@ int emissor_SET(int fd) {
         break;
       }
 
-      print_0x(buf[0]);
+      print_0x(readBuf[0]);
       
-      stateMachine_SET_DISC(readBuf[0], A_EmiRec, C_UA);
+      stateMachine_SET_DISC(readBuf[0], A_RecEmi, C_UA);
 
       if (state == SM_STOP || fail) STOP = TRUE;
     }
   } while (num_try < ll.numTransmissions && fail);
+  printf("\n\n");
   
   alarm(0);
   if (fail) return 1;
@@ -125,8 +133,8 @@ int recetor_UA(int fd) {
   int res;
 
   state = START;
+  printf("\nMensagem SET recebida: ");
 
-  printf("Recetor: Receção de mensagem SET\n");
   while (STOP==FALSE) {
     res = read(fd, buf, 1);
     if (res == -1) {
@@ -140,28 +148,29 @@ int recetor_UA(int fd) {
 
     if (state == SM_STOP) STOP = TRUE;
   }
+  printf("\n\n");
 
   // Resposta do recetor
   unsigned char reply[5];
   reply[0] = FLAG;
-  reply[1] = A_EmiRec;
+  reply[1] = A_RecEmi;
   reply[2] = C_UA;
-  reply[3] = BCC(A_EmiRec, C_UA);
+  reply[3] = BCC(A_RecEmi, C_UA);
   reply[4] = FLAG;
 
-  printf("Recetor: envio de mensagem UA\n");
   res = write(fd, reply, SET_UA_SIZE);
-  if (res != 0) {
-    printf("Recetor: Erro no envio de mensagem UA\n");
+  if (res == -1) {
+    printf("recetor_UA(): Erro no envio de mensagem UA\n");
     return 1;
+  }
+  else {
+    printf("\nMensagem UA enviada: ");
+    for (int i = 0; i < SET_UA_SIZE; i++) print_0x(reply[i]);
+    printf("\n");
   }
 
   return fd;
 }
-
-int emissor_DISC();
-
-int recetor_DISC();
 
 
 int llinit(int *fd, char *port) {
@@ -379,6 +388,7 @@ int stateMachine_Read(char byte, unsigned char **buf, int *bufSize) {
 }
 
 int llwrite(int fd, char *buffer, int length) {
+  printf("A entrar em llwrite()\n");
   volatile int STOP = FALSE;
 
   unsigned char initBuf[4];
@@ -480,69 +490,203 @@ int llwrite(int fd, char *buffer, int length) {
 }
 
 int llread(int fd, char *buffer) {
+  printf("A entrar em llread()\n");
     
-    unsigned char buf[1];
-    unsigned char *dataBuf;
-    volatile int STOP = FALSE;
-    state = START;
-    int res, size;
-    unsigned char cValue;
+  unsigned char buf[1];
+  unsigned char *dataBuf;
+  volatile int STOP = FALSE;
+  state = START;
+  int res, size;
+  unsigned char cValue;
 
-    printf("\n\nConteúdo em llread():\n");
-    while (STOP == FALSE) {
-      res = read(fd, buf, 1);
-      if (res != 1) {
-        printf("llread(): Erro na leitura do Trama I\n");
-        return 1;
-      }
-
-      int sm_Read = stateMachine_Read(buf[0], &dataBuf, &size);
-      if (sm_Read == 1) {
-        cValue = C_REJ(ll.sequenceNumber);
-        printf("llread(): Erro no BCC\n");
-        break;
-      }
-      else if (sm_Read == 2) {
-        cValue = C_RR(ll.sequenceNumber);
-        printf("llread(): Valor de Ns errado\n");
-        break;
-      }
-      cValue = C_RR(ll.sequenceNumber);
-      if (state == SM_STOP) STOP = TRUE;
-    }
-
-    for (int i = 0; i < size; i++) {
-      buffer[i] = dataBuf[i];
-    }
-
-    unsigned char reply[5];
-    reply[0] = FLAG;
-    reply[1] = A_EmiRec;
-    reply[2] = cValue;
-    reply[3] = BCC(A_EmiRec, cValue);
-    reply[4] = FLAG;
-
-    printf("\n\nResposta RR: \n");
-    for (int i = 0; i < 5; i++) {
-      print_0x(reply[i]);
-    }
-
-    res = write(fd, reply, 5);
+  printf("\n\nConteúdo em llread():\n");
+  while (STOP == FALSE) {
+    res = read(fd, buf, 1);
     if (res == -1) {
-      printf("llread(): Erro a escrever resposta\n");
+      printf("llread(): Erro na leitura do Trama I\n");
       return 1;
     }
-    
-    free(dataBuf);
-    return size;
+
+    int sm_Read = stateMachine_Read(buf[0], &dataBuf, &size);
+    if (sm_Read == 1) {
+      cValue = C_REJ(ll.sequenceNumber);
+      printf("llread(): Erro no BCC\n");
+      break;
+    }
+    else if (sm_Read == 2) {
+      cValue = C_RR(ll.sequenceNumber);
+      printf("llread(): Valor de Ns errado\n");
+      break;
+    }
+    cValue = C_RR(ll.sequenceNumber);
+    if (state == SM_STOP) STOP = TRUE;
+  }
+
+  for (int i = 0; i < size; i++) {
+    buffer[i] = dataBuf[i];
+  }
+
+  unsigned char reply[5];
+  reply[0] = FLAG;
+  reply[1] = A_EmiRec;
+  reply[2] = cValue;
+  reply[3] = BCC(A_EmiRec, cValue);
+  reply[4] = FLAG;
+
+  printf("\n\nResposta RR: \n");
+  for (int i = 0; i < 5; i++) {
+    print_0x(reply[i]);
+  }
+
+  res = write(fd, reply, 5);
+  if (res == -1) {
+    printf("llread(): Erro a escrever resposta\n");
+    return 1;
+  }
+  
+  free(dataBuf);
+  return size;
 }
 
 
-int llclose(int fd) {
-    // mensagens DISC e UA
-    sleep(1);
+int emissor_DISC(int fd) {
+  volatile int STOP=FALSE;
 
-    tcsetattr(fd,TCSANOW,&oldtio);
-    close(fd);
+  unsigned char buf[SET_UA_SIZE], readBuf[SET_UA_SIZE];
+  int res, num_try = 0;
+
+  buf[0] = FLAG;
+  buf[1] = A_EmiRec;
+  buf[2] = C_DISC;
+  buf[3] = BCC(A_EmiRec, C_DISC);
+  buf[4] = FLAG;
+
+  do {
+    num_try++;
+    fail = FALSE;
+
+    res = write(fd, buf, SET_UA_SIZE);
+    if (res == -1) {
+      printf("emissor_DISC(): Erro no envio de mensagem DISC\n");
+    }
+    else {
+      printf("Mensagem DISC enviada: ");
+      for (int i = 0; i < SET_UA_SIZE; i++) print_0x(buf[i]);
+      printf("\n");
+    }
+
+    alarm(ll.timeout);
+
+    state = START;
+    printf("\nMensagem DISC recebida: ");
+
+    while (STOP == FALSE) {
+      res = read(fd, readBuf, 1);
+      if (res == -1) {
+        if (num_try < ll.numTransmissions) {
+          fail = TRUE;
+        }
+        break;
+      }
+
+      print_0x(readBuf[0]);
+      
+      stateMachine_SET_DISC(readBuf[0], A_RecEmi, C_DISC);
+
+      if (state == SM_STOP || fail) STOP = TRUE;
+    }
+  } while (num_try < ll.numTransmissions && fail);
+  printf("\n\n");
+  
+  alarm(0);
+  if (fail) return 1;
+
+  return fd;
+}
+
+int recetor_DISC(int fd) {
+  volatile int STOP=FALSE;
+
+  unsigned char buf[1];
+  int res;
+
+  state = START;
+  printf("\nMensagem DISC recebida: ");
+
+  while (STOP==FALSE) {
+    res = read(fd, buf, 1);
+    if (res == -1) {
+      printf("Erro a receber mensagem DISC\n");
+      return 1;
+    }
+    
+    print_0x(buf[0]);
+    
+    stateMachine_SET_DISC(buf[0], A_EmiRec, C_DISC);
+
+    if (state == SM_STOP) STOP = TRUE;
+  }
+  printf("\n\n");
+
+  // Resposta do recetor
+  unsigned char reply[5];
+  reply[0] = FLAG;
+  reply[1] = A_RecEmi;
+  reply[2] = C_UA;
+  reply[3] = BCC(A_RecEmi, C_DISC);
+  reply[4] = FLAG;
+
+  res = write(fd, reply, SET_UA_SIZE);
+  if (res == -1) {
+    printf("recetor_DISC(): Erro no envio de mensagem DISC\n");
+    return 1;
+  }
+  else {
+    printf("\nMensagem DISC enviada: ");
+    for (int i = 0; i < SET_UA_SIZE; i++) print_0x(reply[i]);
+    printf("\n");
+  }
+
+  sleep(3);
+  STOP = FALSE;
+  state = START;
+  unsigned char buf2[1];
+
+  printf("\nMensagem UA recebida: ");
+  while (STOP==FALSE) {
+    res = read(fd, buf2, 1);
+    if (res == -1) {
+      printf("Erro a receber mensagem UA\n");
+      return 1;
+    }
+    
+    print_0x(buf2[0]);
+    
+    stateMachine_SET_DISC(buf2[0], A_RecEmi, C_UA);
+
+    if (state == SM_STOP) STOP = TRUE;
+  }
+  printf("\n\n");
+
+  alarm(0);
+
+  return fd;
+}
+
+int llclose(int fd) {
+
+    switch (ll.type) {
+      case EMISSOR: emissor_DISC(fd); break;
+      case RECETOR: recetor_DISC(fd); break;
+    }
+
+    if ( tcsetattr(fd,TCSANOW,&oldtio) == -1) {
+      perror("tcsetattr");
+      return 1;
+    }
+    if (close(fd) != 0) {
+      printf("Erro em close()\n");
+      return 1;
+    }
     return 0;
 }
