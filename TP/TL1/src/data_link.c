@@ -552,27 +552,27 @@ int llread(int fd, char *buffer) {/*
 int emissor_DISC(int fd) {
   volatile int STOP=FALSE;
 
-  unsigned char buf[SET_UA_SIZE], readBuf[SET_UA_SIZE];
+  unsigned char msgDISC[SET_UA_SIZE], readMsgDISC[SET_UA_SIZE];
   int res, num_try = 0;
 
-  buf[0] = FLAG;
-  buf[1] = A_EmiRec;
-  buf[2] = C_DISC;
-  buf[3] = BCC(A_EmiRec, C_DISC);
-  buf[4] = FLAG;
+  msgDISC[0] = FLAG;
+  msgDISC[1] = A_EmiRec;
+  msgDISC[2] = C_DISC;
+  msgDISC[3] = BCC(A_EmiRec, C_DISC);
+  msgDISC[4] = FLAG;
 
   do {
     num_try++;
     fail = FALSE;
 
-    res = write(fd, buf, SET_UA_SIZE);
+    res = write(fd, msgDISC, SET_UA_SIZE);
     if (res == -1) {
       printf("emissor_DISC(): Erro no envio de mensagem DISC\n");
       return 1;
     }
     else {
       printf("Mensagem DISC enviada: ");
-      for (int i = 0; i < SET_UA_SIZE; i++) print_0x(buf[i]);
+      for (int i = 0; i < SET_UA_SIZE; i++) print_0x(msgDISC[i]);
       printf("\n");
     }
 
@@ -581,7 +581,7 @@ int emissor_DISC(int fd) {
 
     printf("\nMensagem DISC recebida: ");
     while (STOP == FALSE) {
-      res = read(fd, readBuf, 1);
+      res = read(fd, readMsgDISC, 1);
       if (res == -1) {
         if (num_try < ll.numTransmissions) {
           fail = TRUE;
@@ -589,9 +589,9 @@ int emissor_DISC(int fd) {
         break;
       }
 
-      print_0x(readBuf[0]);
+      print_0x(readMsgDISC[0]);
       
-      stateMachine_SET_DISC(readBuf[0], A_RecEmi, C_DISC);
+      stateMachine_SET_DISC(readMsgDISC[0], A_RecEmi, C_DISC);
 
       if (state == SM_STOP || fail) STOP = TRUE;
     }
@@ -601,21 +601,21 @@ int emissor_DISC(int fd) {
   alarm(0);
   if (fail) return 1;
 
-  unsigned char buf2[SET_UA_SIZE];
-  buf2[0] = FLAG;
-  buf2[1] = A_EmiRec;
-  buf2[2] = C_UA;
-  buf2[3] = BCC(A_EmiRec, C_UA);
-  buf2[4] = FLAG;
+  unsigned char msgUA[SET_UA_SIZE];
+  msgUA[0] = FLAG;
+  msgUA[1] = A_EmiRec;
+  msgUA[2] = C_UA;
+  msgUA[3] = BCC(A_EmiRec, C_UA);
+  msgUA[4] = FLAG;
   
-  res = write(fd, buf2, SET_UA_SIZE);
+  res = write(fd, msgUA, SET_UA_SIZE);
   if (res == -1) {
     printf("emissor_DISC(): Erro no envio de mensagem UA\n");
     return 1;
   }
   else {
     printf("Mensagem UA enviada: ");
-    for (int i = 0; i < SET_UA_SIZE; i++) print_0x(buf2[i]);
+    for (int i = 0; i < SET_UA_SIZE; i++) print_0x(msgUA[i]);
     printf("\n");
   }
 
@@ -624,61 +624,61 @@ int emissor_DISC(int fd) {
 
 int recetor_DISC(int fd) {
   volatile int STOP=FALSE;
-  unsigned char buf[1];
+  unsigned char readMsgDISC[1];
   int res;
   state = START;
 
   printf("\nMensagem DISC recebida: ");
   while (STOP==FALSE) {
-    res = read(fd, buf, 1);
+    res = read(fd, readMsgDISC, 1);
     if (res == -1) {
       printf("Erro a receber mensagem DISC\n");
       return 1;
     }
     
-    print_0x(buf[0]);
+    print_0x(readMsgDISC[0]);
     
-    stateMachine_SET_DISC(buf[0], A_EmiRec, C_DISC);
+    stateMachine_SET_DISC(readMsgDISC[0], A_EmiRec, C_DISC);
 
     if (state == SM_STOP) STOP = TRUE;
   }
   printf("\n\n");
 
   // Resposta do recetor
-  unsigned char reply[5];
-  reply[0] = FLAG;
-  reply[1] = A_RecEmi;
-  reply[2] = C_DISC;
-  reply[3] = BCC(A_RecEmi, C_DISC);
-  reply[4] = FLAG;
+  unsigned char msgDISC[5];
+  msgDISC[0] = FLAG;
+  msgDISC[1] = A_RecEmi;
+  msgDISC[2] = C_DISC;
+  msgDISC[3] = BCC(A_RecEmi, C_DISC);
+  msgDISC[4] = FLAG;
 
-  res = write(fd, reply, SET_UA_SIZE);
+  res = write(fd, msgDISC, SET_UA_SIZE);
   if (res == -1) {
     printf("recetor_DISC(): Erro no envio de mensagem DISC\n");
     return 1;
   }
   else {
     printf("\nMensagem DISC enviada: ");
-    for (int i = 0; i < SET_UA_SIZE; i++) print_0x(reply[i]);
+    for (int i = 0; i < SET_UA_SIZE; i++) print_0x(msgDISC[i]);
     printf("\n");
   }
 
   alarm(5);
   STOP = FALSE;
   state = START;
-  unsigned char buf2[1];
+  unsigned char readMsgUA[1];
 
   printf("\nMensagem UA recebida: ");
   while (STOP==FALSE) {
-    res = read(fd, buf2, 1);
+    res = read(fd, readMsgUA, 1);
     if (res == -1) {
       printf("Erro a receber mensagem UA\n");
       return 1;
     }
     
-    print_0x(buf2[0]);
+    print_0x(readMsgUA[0]);
     
-    stateMachine_SET_DISC(buf2[0], A_RecEmi, C_UA);
+    stateMachine_SET_DISC(readMsgUA[0], A_RecEmi, C_UA);
 
     if (state == SM_STOP) STOP = TRUE;
   }
