@@ -9,197 +9,13 @@ void print_0x(unsigned char a) {
   printf("Conteúdo: %#4.2x\n" , a);
 }
 
-
-void stateMachine_SET_UA(enum stateMachine *state, unsigned char *checkBuf, char byte, int type) {
-  switch(*state) {
-    
-    case START:
-      if (byte == FLAG) *state = FLAG_RCV;
-      break;
-    
-    case FLAG_RCV:
-      if (byte == A_EmiRec) {
-        *state = A_RCV;
-        checkBuf[0] = byte;
-      }
-      else if (byte != FLAG) state = START;
-      break;
-
-    case A_RCV: {
-        int C;
-        switch (type) {
-            case EMISSOR: C = C_UA; break;
-            case RECETOR: C = C_SET; break;
-        }
-
-        if (byte == C) {
-          *state = C_RCV;
-          checkBuf[1] = byte;
-        }
-        else if (byte == FLAG) {
-            *state = FLAG_RCV;
-        }
-        else *state = START;
-        break;
-    }
-
-    case C_RCV:
-      if (byte == BCC(checkBuf[0], checkBuf[1])) *state = BCC_OK;
-      else if (byte == FLAG) *state = FLAG_RCV;
-      else *state = START;
-      break;
-
-    case BCC_OK:
-      if (byte == FLAG) *state = SM_STOP;
-      else *state = START;
-      break;
-
-    case SM_STOP:
-      break;
-  }
-}
-
-int stateMachine_Write(enum stateMachine *state, unsigned char byte) {
-  static unsigned char checkBuf[2];
-
-  switch(*state) {
-    case START:
-      if (byte == FLAG) *state = FLAG_RCV;
-      break;
-
-    case FLAG_RCV:
-      if (byte == A_EmiRec) {
-        *state = A_RCV;
-        checkBuf[0] = byte;
-      }
-      else if (byte != FLAG) {
-        *state = START;
-      }
-      break;
-
-    case A_RCV:
-      if (byte == C_RR(ll.sequenceNumber ^ 0x01)) {
-        *state = C_RCV;
-        checkBuf[1] = byte;
-      }
-      else if (byte == C_REJ(ll.sequenceNumber ^ 0x01)) return 1;
-      else if (byte == FLAG) *state = FLAG_RCV;
-      else *state = START;
-      break;
-
-    case C_RCV:
-      if (byte == BCC(checkBuf[0], checkBuf[1])) *state = BCC_OK;
-      else if (byte == FLAG) *state = FLAG_RCV;
-      else return 1;
-      break;
-
-    case BCC_OK:
-      if (byte == FLAG) *state = SM_STOP;
-      else *state = START;
-      break;
-
-    case SM_STOP: break;
-  } 
-
-  return 0;
-}
-
-int stateMachine_Read(enum stateMachine *state, char byte, unsigned char **buf, int *bufSize) {
-  static int frameIndex;
-  static unsigned char checkBuf[2];
-
-  ll.frame[frameIndex] = byte;
-  switch(*state) {
-    case START: {
-      frameIndex = 0;
-      if (byte == FLAG) {
-        *state = FLAG_RCV;
-        frameIndex++;
-      }
-      break;
-    }
-
-    case FLAG_RCV: 
-      if (byte == A_EmiRec) {
-        *state = A_RCV;
-        checkBuf[0] = byte;
-        frameIndex++;
-      }
-      else if (byte != FLAG) *state = START;
-    break;
-
-    case A_RCV: 
-      if (byte == C_I(ll.sequenceNumber)) {
-        *state = C_RCV;
-        checkBuf[1] = byte;
-        frameIndex++;
-      }
-      else if (byte == C_I(ll.sequenceNumber ^ 0x01)) return 1;
-      else if (byte == FLAG) {
-        *state = FLAG_RCV;
-        frameIndex = 1;
-      }
-      else *state = START;
-      break;
-
-    case C_RCV:
-      if (byte == BCC(checkBuf[0], checkBuf[1])) {
-        *state = BCC_OK;
-        frameIndex++;
-      }
-      else if (byte == FLAG) {
-        *state = FLAG_RCV;
-        frameIndex = 1;
-      }
-      else return 1;
-      break;
-
-    case BCC_OK: {
-      frameIndex++;
-
-      if (byte == FLAG) {
-        *buf = (unsigned char *)malloc(frameIndex-6);
-        *bufSize = 0;
-
-        // De-stuffing
-        for (int i = 4; i < frameIndex - 2; i++) {
-          if (ll.frame[i] != 0x7D || ll.frame[i] != 0x7E) {
-            (*buf)[*bufSize] = ll.frame[i];
-          }
-          else {
-            (*buf)[*bufSize] = ll.frame[i + 1] ^ 0x20;
-            i++;
-          }
-          (*bufSize)++;
-        }
-        *buf = (unsigned char *)realloc(*buf, *bufSize);
-      
-        unsigned char BCC2 = *buf[0];
-        for (int i = 1; i < *bufSize; i++) BCC2 = XOR(BCC2, *buf[i]);
-
-        if (ll.frame[frameIndex - 2] == BCC2) {
-          ll.sequenceNumber = XOR(ll.sequenceNumber, 0x01);
-          *state = SM_STOP;
-        }
-        else return 1;
-      }
-    }
-    break;
-
-    case SM_STOP: break;
-  }
-  return 0; 
-}
-
-
 void atende() {
   if (state != SM_STOP) {
-    printf("Emissor não recebeu resposta do recetor!\n");
+    printf("Alarm!\n");
     fail = TRUE;
     return;
   }
 }
-
 
 void setting_alarm_handler() {
   struct sigaction sa;
@@ -209,10 +25,53 @@ void setting_alarm_handler() {
   sigaction(SIGALRM, &sa, NULL);
 }
 
+
+void stateMachine_SET_DISC(unsigned char byte, unsigned char A, unsigned char C) {
+  static unsigned char checkBuf[2];
+  
+  switch(state) {
+    
+    case START:
+      if (byte == FLAG) state = FLAG_RCV;
+      break;
+    
+    case FLAG_RCV:
+      if (byte == A) {
+        state = A_RCV;
+        checkBuf[0] = byte;
+      }
+      else if (byte != FLAG) state = START;
+      break;
+
+    case A_RCV: 
+        if (byte == C) {
+          state = C_RCV;
+          checkBuf[1] = byte;
+        }
+        else if (byte == FLAG) state = FLAG_RCV;
+        else state = START;
+        break;
+
+    case C_RCV:
+      if (byte == BCC(checkBuf[0], checkBuf[1])) state = BCC_OK;
+      else if (byte == FLAG) state = FLAG_RCV;
+      else state = START;
+      break;
+
+    case BCC_OK:
+      if (byte == FLAG) state = SM_STOP;
+      else state = START;
+      break;
+
+    case SM_STOP:
+      break;
+  }
+}
+
 int emissor_SET(int fd) {
   volatile int STOP=FALSE;
 
-  unsigned char buf[SET_UA_SIZE], readBuf[SET_UA_SIZE], checkBuf[2];
+  unsigned char buf[SET_UA_SIZE], readBuf[SET_UA_SIZE];
   int res, num_try = 0;
 
   buf[0] = FLAG;
@@ -247,11 +106,11 @@ int emissor_SET(int fd) {
 
       print_0x(buf[0]);
       
-      stateMachine_SET_UA(&state, checkBuf, readBuf[0], EMISSOR);
+      stateMachine_SET_DISC(readBuf[0], A_EmiRec, C_UA);
 
       if (state == SM_STOP || fail) STOP = TRUE;
     }
-  } while (num_try < ll.numTransmissions || fail);
+  } while (num_try < ll.numTransmissions && fail);
   
   alarm(0);
   if (fail) return 1;
@@ -262,7 +121,7 @@ int emissor_SET(int fd) {
 int recetor_UA(int fd) {
   volatile int STOP=FALSE;
 
-  unsigned char buf[SET_UA_SIZE], checkBuf[2], reply[SET_UA_SIZE];
+  unsigned char buf[1];
   int res;
 
   state = START;
@@ -277,12 +136,13 @@ int recetor_UA(int fd) {
     
     print_0x(buf[0]);
     
-    stateMachine_SET_UA(&state, checkBuf, buf[0], RECETOR);
+    stateMachine_SET_DISC(buf[0], A_EmiRec, C_SET);
 
     if (state == SM_STOP) STOP = TRUE;
   }
 
   // Resposta do recetor
+  unsigned char reply[5];
   reply[0] = FLAG;
   reply[1] = A_EmiRec;
   reply[2] = C_UA;
@@ -291,10 +151,17 @@ int recetor_UA(int fd) {
 
   printf("Recetor: envio de mensagem UA\n");
   res = write(fd, reply, SET_UA_SIZE);
-  printf("%d bytes written\n", res);
+  if (res != 0) {
+    printf("Recetor: Erro no envio de mensagem UA\n");
+    return 1;
+  }
 
   return fd;
 }
+
+int emissor_DISC();
+
+int recetor_DISC();
 
 
 int llinit(int *fd, char *port) {
@@ -348,10 +215,167 @@ int llopen(char *port, int flag) {
   setting_alarm_handler();
 
   switch (flag) {
-      case EMISSOR: emissor_SET(fd); break;
-      case RECETOR: recetor_UA(fd); break;
+      case EMISSOR: {
+        ll.type = EMISSOR;
+        emissor_SET(fd);
+        break;
+      }
+      case RECETOR: {
+        ll.type = RECETOR;
+        recetor_UA(fd);
+        break;
+      }
   }
   return 0;
+}
+
+
+int stateMachine_Write(unsigned char byte) {
+  static unsigned char checkBuf[2];
+
+  switch(state) {
+    case START:
+      if (byte == FLAG) state = FLAG_RCV;
+      break;
+
+    case FLAG_RCV:
+      if (byte == A_EmiRec) {
+        state = A_RCV;
+        checkBuf[0] = byte;
+      }
+      else if (byte != FLAG) state = START;
+      break;
+
+    case A_RCV:
+      if (byte == C_RR(ll.sequenceNumber ^ 0x01)) {
+        state = C_RCV;
+        checkBuf[1] = byte;
+      }
+      else if (byte == C_REJ(ll.sequenceNumber ^ 0x01)) return 1;
+      else if (byte == FLAG) state = FLAG_RCV;
+      else state = START;
+      break;
+
+    case C_RCV:
+      if (byte == BCC(checkBuf[0], checkBuf[1])) state = BCC_OK;
+      else if (byte == FLAG) state = FLAG_RCV;
+      else return 1;
+      break;
+
+    case BCC_OK:
+      if (byte == FLAG) state = SM_STOP;
+      else state = START;
+      break;
+
+    case SM_STOP:
+      break;
+  } 
+
+  return 0;
+}
+
+int stateMachine_Read(char byte, unsigned char **buf, int *bufSize) {
+  static int frameIndex;
+  static unsigned char checkBuf[2];
+  static int correctNs = TRUE;
+
+  ll.frame[frameIndex] = byte;
+  switch(state) {
+    case START: {
+      frameIndex = 0;
+      if (byte == FLAG) {
+        state = FLAG_RCV;
+        frameIndex++;
+      }
+      break;
+    }
+
+    case FLAG_RCV: 
+      if (byte == A_EmiRec) {
+        state = A_RCV;
+        checkBuf[0] = byte;
+        frameIndex++;
+      }
+      else if (byte != FLAG) state = START;
+    break;
+
+    case A_RCV: 
+      if (byte == C_I(ll.sequenceNumber)) {
+        state = C_RCV;
+        checkBuf[1] = byte;
+        frameIndex++;
+      }
+      else if (byte == C_I(ll.sequenceNumber ^ 0x01)) {
+        state = C_RCV;
+        checkBuf[1] = byte;
+        frameIndex++; // -> Wrong Ns
+        correctNs = FALSE;
+      }
+      else if (byte == FLAG) {
+        state = FLAG_RCV;
+        frameIndex = 1;
+      }
+      else state = START;
+      break;
+
+    case C_RCV:
+      if (byte == BCC(checkBuf[0], checkBuf[1])) {
+        if (!correctNs) {
+          printf("stateMachine_Read(): Já recebeu pacote de leitura\n");
+          return 2;
+        }
+        state = BCC_OK;
+        frameIndex++;
+      }
+      else if (byte == FLAG) {
+        state = FLAG_RCV;
+        frameIndex = 1;
+      }
+      else {
+        printf("stateMachine_Read(): BCC errado\n");
+        return 2;
+      }
+      break;
+
+    case BCC_OK: {
+      frameIndex++;
+
+      if (byte == FLAG) {
+        *buf = (unsigned char *)malloc(frameIndex-4-2);
+        *bufSize = 0;
+
+        // De-stuffing
+        for (int i = 4; i < frameIndex - 2; i++) {
+          if (ll.frame[i] == 0x7D || ll.frame[i] == 0x7E) {
+            (*buf)[*bufSize] = ll.frame[i + 1] ^ 0x20;
+            i++;
+          }
+          else {
+            (*buf)[*bufSize] = ll.frame[i];
+          }
+          (*bufSize)++;
+        }
+        *buf = (unsigned char *)realloc(*buf, (*bufSize));
+      
+        unsigned char BCC2 = (*buf)[0];
+        for (int i = 1; i < *bufSize; i++) BCC2 = BCC(BCC2, (*buf)[i]);
+
+        if (ll.frame[frameIndex - 2] == BCC2) {
+          ll.sequenceNumber = XOR(ll.sequenceNumber, 0x01);
+          state = SM_STOP;
+        }
+        else {
+          printf("stateMachine_Read(): BCC errado\n");
+          return 1;
+        }
+      }
+    }
+      break;
+
+    case SM_STOP:
+      break;
+  }
+  return 0; 
 }
 
 int llwrite(int fd, char *buffer, int length) {
@@ -363,21 +387,21 @@ int llwrite(int fd, char *buffer, int length) {
   initBuf[2] = C_I(ll.sequenceNumber);
   initBuf[3] = BCC(A_EmiRec, C_I(ll.sequenceNumber));
 
-  unsigned char endBuf[2];
   unsigned char BCC2 = buffer[0];
   for (int i = 1; i < length; i++) {
     BCC2 = XOR(BCC2, buffer[i]);
   }
+  unsigned char endBuf[2];
   endBuf[0] = BCC2;
   endBuf[1] = FLAG;
 
   int size = length;
-  unsigned char *dataBuf = (unsigned char *) malloc(sizeof(char) * size);
+  unsigned char *dataBuf = (unsigned char *) malloc(size);
   for (int i = 0, j = 0; i < length; i++, j++) {
     if (buffer[i] == 0x7E || buffer[i] == 0x7D) {
       // Aumentar tamanho do buffer de dados
       size++;
-      dataBuf = (unsigned char *) realloc(dataBuf, sizeof(char) * size);
+      dataBuf = (unsigned char *) realloc(dataBuf, size);
 
       // Stuffing
       switch(buffer[i]) {
@@ -415,22 +439,19 @@ int llwrite(int fd, char *buffer, int length) {
     }
   }
 
-  printf("\n\nConteúdo de llwrite() para enviar:\n");
-  for (int i = 0; i < size; i++) {
-    print_0x(allBuf[i]);
-  }
-  printf("\n");
-
   int num_try = 0, res;
   do {
     num_try++;
     fail = FALSE;
 
     res = write(fd, allBuf, sizeof(allBuf));
-    if (res == -1) return 1;
-    printf("%d bytes written\n", res);
+    if (res == -1) {
+      printf("ll_write(): Erro a enviar Trama I\n");
+      return 1;
+    }
 
     alarm(ll.timeout);
+    state = START;
 
     unsigned char readBuf[255];
     while (STOP == FALSE) {
@@ -440,24 +461,27 @@ int llwrite(int fd, char *buffer, int length) {
         if (num_try < ll.numTransmissions) {
           fail = TRUE;
         }
+        else {
+          printf("llwrite(): Erro a ler Trama I\n");
+        }
         break;
       }
 
-      stateMachine_Write(&state, readBuf[0]);
+      stateMachine_Write(readBuf[0]);
 
       if (state == SM_STOP || fail) STOP = TRUE;
     }
 
   } while (num_try < ll.numTransmissions && fail);
   alarm(0);
-  ll.sequenceNumber ^= 0x01;
+  ll.sequenceNumber = XOR(ll.sequenceNumber, 0x01);
 
   return 0;
 }
 
 int llread(int fd, char *buffer) {
     
-    unsigned char buf[SET_UA_SIZE];
+    unsigned char buf[1];
     unsigned char *dataBuf;
     volatile int STOP = FALSE;
     state = START;
@@ -467,13 +491,20 @@ int llread(int fd, char *buffer) {
     printf("\n\nConteúdo em llread():\n");
     while (STOP == FALSE) {
       res = read(fd, buf, 1);
-      if (res != 1) return 1;
+      if (res != 1) {
+        printf("llread(): Erro na leitura do Trama I\n");
+        return 1;
+      }
 
-      print_0x(buf[0]);
-
-      if (stateMachine_Read(&state, buf[0], &dataBuf, &size) != 0) {
+      int sm_Read = stateMachine_Read(buf[0], &dataBuf, &size);
+      if (sm_Read == 1) {
         cValue = C_REJ(ll.sequenceNumber);
-        printf("C_REJ...\n");
+        printf("llread(): Erro no BCC\n");
+        break;
+      }
+      else if (sm_Read == 2) {
+        cValue = C_RR(ll.sequenceNumber);
+        printf("llread(): Valor de Ns errado\n");
         break;
       }
       cValue = C_RR(ll.sequenceNumber);
@@ -497,12 +528,15 @@ int llread(int fd, char *buffer) {
     }
 
     res = write(fd, reply, 5);
-    if (res == -1) return 1;
+    if (res == -1) {
+      printf("llread(): Erro a escrever resposta\n");
+      return 1;
+    }
     
-    ll.sequenceNumber = XOR(ll.sequenceNumber, 0x01);
     free(dataBuf);
     return size;
 }
+
 
 int llclose(int fd) {
     // mensagens DISC e UA

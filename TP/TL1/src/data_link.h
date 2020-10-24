@@ -53,6 +53,7 @@ enum stateMachine {
 };
 
 struct linkLayer {
+  unsigned int type;
   char port[20];
   int baudRate;
   unsigned char sequenceNumber;
@@ -62,21 +63,23 @@ struct linkLayer {
 };
 
 void print_0x(unsigned char a);
-
-void stateMachine_SET_UA(enum stateMachine *state, unsigned char *checkBuf, char byte, int type);
-int stateMachine_Write(enum stateMachine *state, unsigned char byte);
-int stateMachine_Read(enum stateMachine *state, char byte, unsigned char **buf, int *bufSize);
-
 void atende();
-
 void setting_alarm_handler();
+
+void stateMachine_SET_DISC(unsigned char byte, unsigned char A, unsigned char C);
 int emissor_SET(int fd);
 int recetor_UA(int fd);
+int emissor_DISC();
+int recetor_DISC();
 
 int llinit(int *fd, char *port);
 int llopen(char *port, int type);
+
+int stateMachine_Write(unsigned char byte);
+int stateMachine_Read(char byte, unsigned char **buf, int *bufSize);
 int llwrite(int fd, char *buffer, int length);
 int llread(int fd, char *buffer);
+
 int llclose(int fd);
 
 #endif // DATA_LINK_H
