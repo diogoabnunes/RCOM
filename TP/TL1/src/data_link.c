@@ -101,9 +101,9 @@ int recetor_UA(int fd) {
   // Resposta do recetor
   unsigned char reply[SET_UA_SIZE];
   reply[0] = FLAG;
-  reply[1] = A_EmiRec;
+  reply[1] = A_RecEmi;
   reply[2] = C_UA;
-  reply[3] = BCC(A_EmiRec, C_UA);
+  reply[3] = BCC(A_RecEmi, C_UA);
   reply[4] = FLAG;
 
   res = write(fd, reply, SET_UA_SIZE);
