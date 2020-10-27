@@ -113,7 +113,7 @@ int SM_C_RCV(unsigned char byte) {
     if (byte == BCC(checkBuf[0], checkBuf[1])) {
         if (SM.type == READ && wrongC) {
             printf("Este pacote já tinha sido recebido\n");
-            return 1;
+            return 2;
         }
         SM.state = BCC_OK;
         if (SM.type == READ) frameIndex++;

@@ -128,7 +128,6 @@ int recetor_UA(int fd) {
   return fd;
 }
 
-
 int llinit(int *fd, char *port) {
 
     *fd = open(port, O_RDWR | O_NOCTTY );
@@ -194,9 +193,11 @@ int llopen(char *port, int flag) {
   return 0;
 }
 
-int llwrite(int fd, char *buffer, int length) {/*
-  printf("A entrar em llwrite()\n");
-  volatile int STOP = FALSE;
+int llwrite(int fd, char *buffer, int length) {
+  if (length > MAX_SIZE) {
+    printf("A mensagem tem mais do que MAX_SIZE...\n");
+    return 1;
+  }
 
   unsigned char initBuf[4];
   initBuf[0] = FLAG;
@@ -206,7 +207,7 @@ int llwrite(int fd, char *buffer, int length) {/*
 
   unsigned char BCC2 = buffer[0];
   for (int i = 1; i < length; i++) {
-    BCC2 = XOR(BCC2, buffer[i]);
+    BCC2 = BCC(BCC2, buffer[i]);
   }
   unsigned char endBuf[2];
   endBuf[0] = BCC2;
@@ -239,6 +240,7 @@ int llwrite(int fd, char *buffer, int length) {/*
     else dataBuf[j] = buffer[i];
   }
 
+  // Criação de Trama I: init + dados + end
   int allSize = 4 + size + 2, datai = 0, endi;
   unsigned char allBuf[allSize];
   for (int i = 0; i < allSize; i++) {
@@ -255,77 +257,88 @@ int llwrite(int fd, char *buffer, int length) {/*
     }
   }
 
+  settingUpSM(WRITE, START, A_RecEmi, C_RR(XOR(ll.sequenceNumber, 0x01)));
+
   int num_try = 0, res;
+  volatile int STOP = FALSE;
+
+  // Envio de Trama I
   do {
     num_try++;
-    fail = FALSE;
-
-    res = write(fd, allBuf, sizeof(allBuf));
+    res = write(fd, allBuf, allSize);
     if (res == -1) {
       printf("ll_write(): Erro a enviar Trama I\n");
       return 1;
     }
 
     alarm(ll.timeout);
-    state = START;
+    SM.state = START;
+    fail = FALSE;
+    unsigned char readBuf[1];
 
-    unsigned char readBuf[255];
     while (STOP == FALSE) {
       res = read(fd, readBuf, 1);
 
-      if (res == -1) {
+      if (res == -1 && errno == EINTR) {
+        printf("Erro a receber RR do recetor...\n");
         if (num_try < ll.numTransmissions) {
-          fail = TRUE;
+          printf("Nova tentativa...\n");
         }
-        else {
-          printf("llwrite(): Erro a ler Trama I\n");
-        }
+      }
+      else if (res == -1) {
+          printf("Erro a receber RR\n");
+          return 1;
+      }
+
+      if (stateMachine(readBuf[0], NULL, NULL) != 0) {
+        printf("Erro a receber RR ou REJ...\n");
+        fail = TRUE;
+        alarm(0);
         break;
       }
 
-      stateMachine_Write(readBuf[0]);
-
-      if (state == SM_STOP || fail) STOP = TRUE;
+      if (SM.state == SM_STOP || fail) STOP = TRUE;
     }
 
   } while (num_try < ll.numTransmissions && fail);
+  
   alarm(0);
-  ll.sequenceNumber = XOR(ll.sequenceNumber, 0x01);*/
+  ll.sequenceNumber = XOR(ll.sequenceNumber, 0x01);
 
   return 0;
 }
 
-int llread(int fd, char *buffer) {/*
-  printf("A entrar em llread()\n");
-    
-  unsigned char buf[1];
+int llread(int fd, unsigned char *buffer) {
+  settingUpSM(READ, START, A_EmiRec, C_I(ll.sequenceNumber));
   unsigned char *dataBuf;
-  volatile int STOP = FALSE;
-  state = START;
-  int res, size;
+  int size;
   unsigned char cValue;
 
-  printf("\n\nConteúdo em llread():\n");
+  volatile int STOP = FALSE;
+  unsigned char buf[1];
+  int res;
+
   while (STOP == FALSE) {
     res = read(fd, buf, 1);
     if (res == -1) {
-      printf("llread(): Erro na leitura do Trama I\n");
+      printf("Erro a receber trama I...\n");
       return 1;
     }
 
-    int sm_Read = stateMachine_Read(buf[0], &dataBuf, &size);
-    if (sm_Read == 1) {
+    int smRead = stateMachine(buf[0], &dataBuf, &size);
+    if (smRead == 1) {
       cValue = C_REJ(ll.sequenceNumber);
-      printf("llread(): Erro no BCC\n");
+      printf("Erro no BCC...\n");
       break;
     }
-    else if (sm_Read == 2) {
+    else if (smRead == 2) {
       cValue = C_RR(ll.sequenceNumber);
-      printf("llread(): Valor de Ns errado\n");
+      printf("Número de sequência errado em no byte C...\n");
       break;
     }
     cValue = C_RR(ll.sequenceNumber);
-    if (state == SM_STOP) STOP = TRUE;
+
+    if (SM.state == SM_STOP) STOP = TRUE;
   }
 
   for (int i = 0; i < size; i++) {
@@ -339,22 +352,15 @@ int llread(int fd, char *buffer) {/*
   reply[3] = BCC(A_EmiRec, cValue);
   reply[4] = FLAG;
 
-  printf("\n\nResposta RR: \n");
-  for (int i = 0; i < 5; i++) {
-    print_0x(reply[i]);
-  }
-
   res = write(fd, reply, 5);
   if (res == -1) {
-    printf("llread(): Erro a escrever resposta\n");
+    printf("Erro a escrever resposta em llread()...\n");
     return 1;
   }
   
   free(dataBuf);
-  return size;*/
-  return 0;
+  return size;
 }
-
 
 int emissor_DISC(int fd) {
   unsigned char msgDISC[SET_UA_SIZE];
