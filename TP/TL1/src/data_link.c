@@ -1,9 +1,9 @@
 #include "data_link.h"
+#include "state_machine.h"
 
 struct termios oldtio;
-enum stateMachine state;
+struct stateMachine state;
 int fail = FALSE;
-struct linkLayer ll;
 
 void print_0x(unsigned char a) {
   if (a == 0) {
@@ -13,9 +13,9 @@ void print_0x(unsigned char a) {
 }
 
 void atende() {
-  if (state != SM_STOP) {
-    printf("Alarm!\n");
+  if (SM.state != SM_STOP) {
     fail = TRUE;
+    printf("Alarm!\n");
     return;
   }
 }
@@ -28,96 +28,48 @@ void setting_alarm_handler() {
   sigaction(SIGALRM, &sa, NULL);
 }
 
-
-void stateMachine_SET_DISC(unsigned char byte, unsigned char A, unsigned char C) {
-  static unsigned char checkBuf[2];
-  
-  switch(state) {
-    
-    case START:
-      if (byte == FLAG) state = FLAG_RCV;
-      break;
-    
-    case FLAG_RCV:
-      if (byte == A) {
-        state = A_RCV;
-        checkBuf[0] = byte;
-      }
-      else if (byte != FLAG) state = START;
-      break;
-
-    case A_RCV: 
-        if (byte == C) {
-          state = C_RCV;
-          checkBuf[1] = byte;
-        }
-        else if (byte == FLAG) state = FLAG_RCV;
-        else state = START;
-        break;
-
-    case C_RCV:
-      if (byte == BCC(checkBuf[0], checkBuf[1])) state = BCC_OK;
-      else if (byte == FLAG) state = FLAG_RCV;
-      else state = START;
-      break;
-
-    case BCC_OK:
-      if (byte == FLAG) state = SM_STOP;
-      else state = START;
-      break;
-
-    case SM_STOP:
-      break;
-  }
-}
-
 int emissor_SET(int fd) {
-  volatile int STOP=FALSE;
-
-  unsigned char buf[SET_UA_SIZE], readBuf[SET_UA_SIZE];
-  int res, num_try = 0;
-
+  unsigned char buf[SET_UA_SIZE];
   buf[0] = FLAG;
   buf[1] = A_EmiRec;
   buf[2] = C_SET;
   buf[3] = BCC(A_EmiRec, C_SET);
   buf[4] = FLAG;
 
+  settingUpSM(SV, START, A_RecEmi, C_UA);
+
+  volatile int STOP=FALSE;
+  int res, num_try = 0;
   do {
     num_try++;
-    fail = FALSE;
-
     res = write(fd, buf, SET_UA_SIZE);
     if (res == -1) {
       printf("emissor_SET(): Erro no envio de mensagem SET\n");
       return 1;
     }
-    else {
-      printf("\nMensagem SET enviada: ");
-      for (int i = 0; i < SET_UA_SIZE; i++) print_0x(buf[i]);
-      printf("\n");
-    }
+    else printf("Mensagem SET enviada\n");
 
     alarm(ll.timeout);
-    state = START;
+    SM.state = START;
+    fail = FALSE;
+    unsigned char readBuf[SET_UA_SIZE];
 
-    printf("\nMensagem UA recebida: ");
     while (STOP == FALSE) {
       res = read(fd, readBuf, 1);
-      if (res == -1) {
-        if (num_try < ll.numTransmissions) {
-          fail = TRUE;
-        }
-        break;
+      if (res == -1 && errno == EINTR) {
+        printf("Erro a receber a mensagem UA do recetor...\n");
+        if (num_try < ll.numTransmissions) printf("Nova tentativa...\n");
       }
-
-      print_0x(readBuf[0]);
+      else if (res == -1) {
+          printf("Erro a receber a mensagem UA do buffer...\n");
+      }
       
-      stateMachine_SET_DISC(readBuf[0], A_RecEmi, C_UA);
+      stateMachine(readBuf[0], NULL, NULL); // **buf and *size not needed here
 
-      if (state == SM_STOP || fail) STOP = TRUE;
+      if (SM.state == SM_STOP || fail) STOP = TRUE;
     }
   } while (num_try < ll.numTransmissions && fail);
+  printf("Mensagem UA recebida\n");
   printf("\n\n");
   
   alarm(0);
@@ -127,13 +79,11 @@ int emissor_SET(int fd) {
 }
 
 int recetor_UA(int fd) {
-  volatile int STOP=FALSE;
+  settingUpSM(SV, START, A_EmiRec, C_SET);
 
   unsigned char buf[1];
   int res;
-
-  state = START;
-  printf("\nMensagem SET recebida: ");
+  volatile int STOP=FALSE;
 
   while (STOP==FALSE) {
     res = read(fd, buf, 1);
@@ -142,20 +92,18 @@ int recetor_UA(int fd) {
       return 1;
     }
     
-    print_0x(buf[0]);
-    
-    stateMachine_SET_DISC(buf[0], A_EmiRec, C_SET);
+    stateMachine(buf[0], NULL, NULL); // **buf and *size not needed here
 
-    if (state == SM_STOP) STOP = TRUE;
+    if (SM.state == SM_STOP) STOP = TRUE;
   }
-  printf("\n\n");
+  printf("Mensagem SET recebida\n");
 
   // Resposta do recetor
-  unsigned char reply[5];
+  unsigned char reply[SET_UA_SIZE];
   reply[0] = FLAG;
-  reply[1] = A_RecEmi;
+  reply[1] = A_EmiRec;
   reply[2] = C_UA;
-  reply[3] = BCC(A_RecEmi, C_UA);
+  reply[3] = BCC(A_EmiRec, C_UA);
   reply[4] = FLAG;
 
   res = write(fd, reply, SET_UA_SIZE);
@@ -163,11 +111,7 @@ int recetor_UA(int fd) {
     printf("recetor_UA(): Erro no envio de mensagem UA\n");
     return 1;
   }
-  else {
-    printf("Mensagem UA enviada: ");
-    for (int i = 0; i < SET_UA_SIZE; i++) print_0x(reply[i]);
-    printf("\n");
-  }
+  else printf("Mensagem UA enviada\n");
 
   return fd;
 }
@@ -236,155 +180,6 @@ int llopen(char *port, int flag) {
       }
   }
   return 0;
-}
-
-
-int stateMachine_Write(unsigned char byte) {
-  static unsigned char checkBuf[2];
-
-  switch(state) {
-    case START:
-      if (byte == FLAG) state = FLAG_RCV;
-      break;
-
-    case FLAG_RCV:
-      if (byte == A_EmiRec) {
-        state = A_RCV;
-        checkBuf[0] = byte;
-      }
-      else if (byte != FLAG) state = START;
-      break;
-
-    case A_RCV:
-      if (byte == C_RR(ll.sequenceNumber ^ 0x01)) {
-        state = C_RCV;
-        checkBuf[1] = byte;
-      }
-      else if (byte == C_REJ(ll.sequenceNumber ^ 0x01)) return 1;
-      else if (byte == FLAG) state = FLAG_RCV;
-      else state = START;
-      break;
-
-    case C_RCV:
-      if (byte == BCC(checkBuf[0], checkBuf[1])) state = BCC_OK;
-      else if (byte == FLAG) state = FLAG_RCV;
-      else return 1;
-      break;
-
-    case BCC_OK:
-      if (byte == FLAG) state = SM_STOP;
-      else state = START;
-      break;
-
-    case SM_STOP:
-      break;
-  } 
-
-  return 0;
-}
-
-int stateMachine_Read(char byte, unsigned char **buf, int *bufSize) {
-  static int frameIndex;
-  static unsigned char checkBuf[2];
-  static int correctNs = TRUE;
-
-  ll.frame[frameIndex] = byte;
-  switch(state) {
-    case START: {
-      frameIndex = 0;
-      if (byte == FLAG) {
-        state = FLAG_RCV;
-        frameIndex++;
-      }
-      break;
-    }
-
-    case FLAG_RCV: 
-      if (byte == A_EmiRec) {
-        state = A_RCV;
-        checkBuf[0] = byte;
-        frameIndex++;
-      }
-      else if (byte != FLAG) state = START;
-    break;
-
-    case A_RCV: 
-      if (byte == C_I(ll.sequenceNumber)) {
-        state = C_RCV;
-        checkBuf[1] = byte;
-        frameIndex++;
-      }
-      else if (byte == C_I(ll.sequenceNumber ^ 0x01)) {
-        state = C_RCV;
-        checkBuf[1] = byte;
-        frameIndex++; // -> Wrong Ns
-        correctNs = FALSE;
-      }
-      else if (byte == FLAG) {
-        state = FLAG_RCV;
-        frameIndex = 1;
-      }
-      else state = START;
-      break;
-
-    case C_RCV:
-      if (byte == BCC(checkBuf[0], checkBuf[1])) {
-        if (!correctNs) {
-          printf("stateMachine_Read(): Já recebeu pacote de leitura\n");
-          return 2;
-        }
-        state = BCC_OK;
-        frameIndex++;
-      }
-      else if (byte == FLAG) {
-        state = FLAG_RCV;
-        frameIndex = 1;
-      }
-      else {
-        printf("stateMachine_Read(): BCC errado\n");
-        return 2;
-      }
-      break;
-
-    case BCC_OK: {
-      frameIndex++;
-
-      if (byte == FLAG) {
-        *buf = (unsigned char *)malloc(frameIndex-4-2);
-        *bufSize = 0;
-
-        // De-stuffing
-        for (int i = 4; i < frameIndex - 2; i++) {
-          if (ll.frame[i] == 0x7D || ll.frame[i] == 0x7E) {
-            (*buf)[*bufSize] = ll.frame[i + 1] ^ 0x20;
-            i++;
-          }
-          else {
-            (*buf)[*bufSize] = ll.frame[i];
-          }
-          (*bufSize)++;
-        }
-        *buf = (unsigned char *)realloc(*buf, (*bufSize));
-      
-        unsigned char BCC2 = (*buf)[0];
-        for (int i = 1; i < *bufSize; i++) BCC2 = BCC(BCC2, (*buf)[i]);
-
-        if (ll.frame[frameIndex - 2] == BCC2) {
-          ll.sequenceNumber = XOR(ll.sequenceNumber, 0x01);
-          state = SM_STOP;
-        }
-        else {
-          printf("stateMachine_Read(): BCC errado\n");
-          return 1;
-        }
-      }
-    }
-      break;
-
-    case SM_STOP:
-      break;
-  }
-  return 0; 
 }
 
 int llwrite(int fd, char *buffer, int length) {/*
@@ -550,21 +345,20 @@ int llread(int fd, char *buffer) {/*
 
 
 int emissor_DISC(int fd) {
-  volatile int STOP=FALSE;
-
-  unsigned char msgDISC[SET_UA_SIZE], readMsgDISC[SET_UA_SIZE];
-  int res, num_try = 0;
-
+  unsigned char msgDISC[SET_UA_SIZE];
   msgDISC[0] = FLAG;
   msgDISC[1] = A_EmiRec;
   msgDISC[2] = C_DISC;
   msgDISC[3] = BCC(A_EmiRec, C_DISC);
   msgDISC[4] = FLAG;
 
+  settingUpSM(SV, START, A_RecEmi, C_DISC);
+
+  int res, num_try = 0;
+  volatile int STOP=FALSE;
+
   do {
     num_try++;
-    fail = FALSE;
-
     res = write(fd, msgDISC, SET_UA_SIZE);
     if (res == -1) {
       printf("emissor_DISC(): Erro no envio de mensagem DISC\n");
@@ -577,35 +371,42 @@ int emissor_DISC(int fd) {
     }
 
     alarm(ll.timeout);
-    state = START;
+    SM.state = START;
+    fail = FALSE;
+    unsigned char readMsgDISC[1];
 
     printf("\nMensagem DISC recebida: ");
     while (STOP == FALSE) {
       res = read(fd, readMsgDISC, 1);
-      if (res == -1) {
-        if (num_try < ll.numTransmissions) {
-          fail = TRUE;
-        }
-        break;
+      if (res == -1 && errno == EINTR) {
+        printf("Erro a receber a mensagem DISC do recetor...\n");
+        if (num_try < ll.numTransmissions) printf("Nova tentativa...\n");
+      }
+      else if (res == -1) { 
+        printf("Erro a receber a mensagem DISC no número de tentativas permitidas...\n");
+        return 1;
       }
 
       print_0x(readMsgDISC[0]);
       
-      stateMachine_SET_DISC(readMsgDISC[0], A_RecEmi, C_DISC);
+      stateMachine(readMsgDISC[0], NULL, NULL);
 
-      if (state == SM_STOP || fail) STOP = TRUE;
+      if (SM.state == SM_STOP || fail) STOP = TRUE;
     }
   } while (num_try < ll.numTransmissions && fail);
   printf("\n\n");
   
   alarm(0);
-  if (fail) return 1;
+  if (fail) {
+    printf("Emissor: Todas as tentativas de receber DISC foram sem sucesso...\n");
+    return 1;
+  }
 
   unsigned char msgUA[SET_UA_SIZE];
   msgUA[0] = FLAG;
-  msgUA[1] = A_EmiRec;
+  msgUA[1] = A_RecEmi;
   msgUA[2] = C_UA;
-  msgUA[3] = BCC(A_EmiRec, C_UA);
+  msgUA[3] = BCC(A_RecEmi, C_UA);
   msgUA[4] = FLAG;
   
   res = write(fd, msgUA, SET_UA_SIZE);
@@ -623,10 +424,11 @@ int emissor_DISC(int fd) {
 }
 
 int recetor_DISC(int fd) {
-  volatile int STOP=FALSE;
+  settingUpSM(SV, START, A_EmiRec, C_DISC);
+
   unsigned char readMsgDISC[1];
   int res;
-  state = START;
+  volatile int STOP=FALSE;
 
   printf("\nMensagem DISC recebida: ");
   while (STOP==FALSE) {
@@ -638,9 +440,9 @@ int recetor_DISC(int fd) {
     
     print_0x(readMsgDISC[0]);
     
-    stateMachine_SET_DISC(readMsgDISC[0], A_EmiRec, C_DISC);
+    stateMachine(readMsgDISC[0], NULL, NULL);
 
-    if (state == SM_STOP) STOP = TRUE;
+    if (SM.state == SM_STOP) STOP = TRUE;
   }
   printf("\n\n");
 
@@ -665,7 +467,7 @@ int recetor_DISC(int fd) {
 
   alarm(5);
   STOP = FALSE;
-  state = START;
+  SM.state = START;
   unsigned char readMsgUA[1];
 
   printf("\nMensagem UA recebida: ");
@@ -678,9 +480,9 @@ int recetor_DISC(int fd) {
     
     print_0x(readMsgUA[0]);
     
-    stateMachine_SET_DISC(readMsgUA[0], A_RecEmi, C_UA);
+    stateMachine(readMsgUA[0], NULL, NULL);
 
-    if (state == SM_STOP) STOP = TRUE;
+    if (SM.state == SM_STOP) STOP = TRUE;
   }
   printf("\n\n");
 
@@ -690,19 +492,21 @@ int recetor_DISC(int fd) {
 }
 
 int llclose(int fd) {
+  int ret = fd;
 
-    switch (ll.type) {
-      case EMISSOR: emissor_DISC(fd); break;
-      case RECETOR: recetor_DISC(fd); break;
-    }
+  switch (ll.type) {
+    case EMISSOR: if (emissor_DISC(fd) != 0) ret = -1; break;
+    case RECETOR: if (recetor_DISC(fd) != 0) ret = -1; break;
+  }
 
-    if ( tcsetattr(fd,TCSANOW,&oldtio) == -1) {
-      perror("tcsetattr");
-      return 1;
-    }
-    if (close(fd) != 0) {
-      printf("Erro em close()\n");
-      return 1;
-    }
-    return 0;
+  if ( tcsetattr(fd,TCSANOW,&oldtio) == -1) {
+    perror("tcsetattr");
+    return 1;
+  }
+  if (close(fd) != 0) {
+    printf("Erro em close()\n");
+    return 1;
+  }
+
+  return ret;
 }

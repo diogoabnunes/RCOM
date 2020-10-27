@@ -12,6 +12,7 @@
 #include <signal.h>
 #include <string.h>
 #include <ctype.h>
+#include <errno.h>
 
 #define SET_UA_SIZE 5
 
@@ -39,15 +40,6 @@
 
 #define MAX_SIZE 512
 
-enum stateMachine {
-    START,
-    FLAG_RCV,
-    A_RCV,
-    C_RCV,
-    BCC_OK,
-    SM_STOP
-};
-
 struct linkLayer {
   unsigned int type;
   char port[20];
@@ -58,19 +50,18 @@ struct linkLayer {
   unsigned char frame[MAX_SIZE];
 };
 
+struct linkLayer ll;
+
 void print_0x(unsigned char a);
 void atende();
 void setting_alarm_handler();
 
-void stateMachine_SET_DISC(unsigned char byte, unsigned char A, unsigned char C);
 int emissor_SET(int fd);
 int recetor_UA(int fd);
 
 int llinit(int *fd, char *port);
 int llopen(char *port, int type);
 
-int stateMachine_Write(unsigned char byte);
-int stateMachine_Read(char byte, unsigned char **buf, int *bufSize);
 int llwrite(int fd, char *buffer, int length);
 int llread(int fd, char *buffer);
 

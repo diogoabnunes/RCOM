@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -Wall
-DEPS = 
-OBJ = data_link.c
+DEPS = data_link.h state_machine-h
+OBJ = data_link.c state_machine.c
 TARGETS = app
 
 all: app
