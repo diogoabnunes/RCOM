@@ -43,13 +43,18 @@ int emissor_SET(int fd) {
       printf("Erro no envio de mensagem SET\n");
       return 1;
     }
-    else printf("Mensagem SET enviada\n");
+    else {
+      printf("Mensagem SET enviada: ");
+      for (int i = 0; i < SET_UA_SIZE; i++) print_0x(buf[i]);
+      printf("\n");
+    }
 
     alarm(ll.timeout);
     SM.state = START;
     fail = FALSE;
     unsigned char readBuf[1];
 
+    printf("Mensagem UA recebida: ");
     while (STOP == FALSE) {
       res = read(fd, readBuf, 1);
       if (res == -1 && errno == EINTR) {
@@ -60,19 +65,20 @@ int emissor_SET(int fd) {
         printf("Erro a receber a mensagem UA do buffer...\n");
         return 1;
       }
+      print_0x(readBuf[0]);
       
       stateMachine(readBuf[0], NULL, NULL); // **buf and *size not needed here
 
       if (SM.state == SM_STOP || fail) STOP = TRUE;
     }
   } while (num_try < ll.numTransmissions && fail);
+  printf("\n\n");
 
   if (fail) {
     printf("Todas as tentativas de receber UA foram sem sucesso...\n");
     return 1;
   }
-  else printf("Mensagem UA recebida\n");
-  
+
   alarm(0);
 
   return fd;
@@ -85,18 +91,20 @@ int recetor_UA(int fd) {
   int res;
   volatile int STOP=FALSE;
 
+  printf("Mensagem SET recebida: ");
   while (STOP==FALSE) {
     res = read(fd, buf, 1);
     if (res == -1) {
       printf("Erro a receber mensagem SET\n");
       return 1;
     }
-    
+    print_0x(buf[0]);
+
     stateMachine(buf[0], NULL, NULL); // **buf and *size not needed here
 
     if (SM.state == SM_STOP) STOP = TRUE;
   }
-  printf("Mensagem SET recebida\n");
+  printf("\n");
 
   // Resposta do recetor
   unsigned char reply[SET_UA_SIZE];
@@ -111,7 +119,11 @@ int recetor_UA(int fd) {
     printf("Erro no envio de mensagem UA\n");
     return 1;
   }
-  else printf("Mensagem UA enviada\n");
+  else { 
+    printf("Mensagem UA enviada: ");
+    for (int i = 0; i < SET_UA_SIZE; i++) print_0x(reply[i]);
+    printf("\n\n");
+  }
 
   return fd;
 }
@@ -364,13 +376,18 @@ int emissor_DISC(int fd) {
       printf("Erro no envio de mensagem DISC\n");
       return -1;
     }
-    else printf("Mensagem DISC enviada\n");
+    else { 
+      printf("Mensagem DISC enviada: ");
+      for (int i = 0; i < SET_UA_SIZE; i++) print_0x(msgDISC[i]);
+      printf("\n");
+    }
 
     alarm(ll.timeout);
     SM.state = START;
     fail = FALSE;
     unsigned char readBuf[1];
 
+    printf("Mensagem DISC recebida: ");
     while (STOP == FALSE) {
       res = read(fd, readBuf, 1);
       if (res == -1 && errno == EINTR) {
@@ -381,18 +398,19 @@ int emissor_DISC(int fd) {
         printf("Erro a receber a mensagem DISC no número de tentativas permitidas...\n");
         return -1;
       }
+      print_0x(readBuf[0]);
 
       stateMachine(readBuf[0], NULL, NULL); // **buf and *size not needed here
 
       if (SM.state == SM_STOP || fail) STOP = TRUE;
     }
   } while (num_try < ll.numTransmissions && fail);
+  printf("\n");
 
   if (fail) {
     printf("Todas as tentativas de receber DISC foram sem sucesso...\n");
     return -1;
   }
-  else printf("Mensagem DISC recebida\n");
   
   alarm(0);
 
@@ -408,7 +426,11 @@ int emissor_DISC(int fd) {
     printf("emissor_DISC(): Erro no envio de mensagem UA\n");
     return -1;
   }
-  else printf("Mensagem UA enviada\n");
+  else { 
+    printf("Mensagem UA enviada: ");
+    for (int i = 0; i < SET_UA_SIZE; i++) print_0x(msgUA[i]);
+    printf("\n\n");
+  }
 
   return fd;
 }
@@ -420,18 +442,19 @@ int recetor_DISC(int fd) {
   int res;
   volatile int STOP=FALSE;
 
+  printf("Mensagem DISC recebida: ");
   while (STOP==FALSE) {
     res = read(fd, readBuf, 1);
     if (res == -1) {
       printf("Erro a receber mensagem DISC\n");
       return -1;
     }
+    print_0x(readBuf[0]);
 
     stateMachine(readBuf[0], NULL, NULL);
 
     if (SM.state == SM_STOP) STOP = TRUE;
   }
-  printf("Mensagem DISC recebida\n");
 
   // Resposta do recetor
   unsigned char reply[SET_UA_SIZE];
@@ -447,26 +470,30 @@ int recetor_DISC(int fd) {
     return -1;
   }
   else {
-    printf("\nMensagem DISC enviada\n");
+    printf("\nMensagem DISC enviada: ");
+    for (int i = 0; i < SET_UA_SIZE; i++) print_0x(reply[i]); 
+    printf("\n");
   }
 
   settingUpSM(SV, START, A_EmiRec, C_UA);
   STOP = FALSE;
   unsigned char readMsgUA[1];
 
+  printf("Mensagem UA recebida: ");
   while (STOP==FALSE) {
     res = read(fd, readMsgUA, 1);
     if (res == -1) {
       printf("Erro a receber mensagem UA\n");
       return -1;
     }
+    print_0x(readMsgUA[0]);
 
     stateMachine(readMsgUA[0], NULL, NULL);
 
     if (SM.state == SM_STOP) STOP = TRUE;
   }
   alarm(0);
-  printf("Mensagem UA recebida\n");
+  printf("\n\n");
 
   return fd;
 }
@@ -475,8 +502,8 @@ int llclose(int fd) {
   int ret = fd;
 
   switch (ll.type) {
-    case EMISSOR: if (emissor_DISC(fd) < 0) ret = -1; break;
-    case RECETOR: if (recetor_DISC(fd) < 0) ret = -1; break;
+    case EMISSOR: if (emissor_DISC(fd) == 0) ret = -1; break;
+    case RECETOR: if (recetor_DISC(fd) == 0) ret = -1; break;
   }
 
   if ( tcsetattr(fd,TCSANOW,&oldtio) == -1) {

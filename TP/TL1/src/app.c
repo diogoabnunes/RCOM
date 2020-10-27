@@ -22,7 +22,7 @@ int main(int argc, char** argv) {
 
     
     int fd = llopen(port, type);
-    if (fd == -1) {
+    if (fd < 0) {
         printf("Error in llopen()...\n");
         exit(2);
     }
@@ -34,16 +34,19 @@ int main(int argc, char** argv) {
         printf("Size MSG: %d", size);
     }
     */
+
     if (type == EMISSOR) printf("\nllwrite() to fix\n");
     else if (type == RECETOR) printf("\nllread() to fix\n");
 
     printf("\n\n");
 
-
-    if (llclose(fd) != 0) {
+    if (llclose(fd) < 0) {
         printf("Erro em llclose()\n");
         exit(3);
     }
+
+    if (type == EMISSOR) printf("Emissor terminou execução.");
+    else if (type == RECETOR) printf("Recetor terminou execução.");
 
     return 0;
 }
