@@ -1,15 +1,17 @@
 #include "data_link.h"
 
-struct applicationLayer{
-  off_t filesize;
-  char filename[255];
-  char destinationArg[255];
-  char filenameArg[255];
+struct applicationLayer {
   int type;
   char port[255];
-};
+  char filename[255];
+  char destination[255];
 
-struct applicationLayer applayer;
+  char file[255];
+  off_t filesize;
+} app;
+
+// int appEmissor(int fd, char *file) {}
+// int appRecetor(int fd) {}
 
 int main(int argc, char** argv) {
     printf("\n\n\nAplicação - RCOM - TL1\n");
@@ -19,28 +21,28 @@ int main(int argc, char** argv) {
         exit(1);
     }
     if (strcmp("emissor", argv[1]) == 0) {
-        applayer.type = EMISSOR;
-        strcpy(applayer.filenameArg, argv[3]);
+        app.type = EMISSOR;
+        strcpy(app.filename, argv[3]);
     }
     else if (strcmp("recetor", argv[1]) == 0) {
-        applayer.type = RECETOR;
-        strcpy(applayer.destinationArg, argv[3]);
+        app.type = RECETOR;
+        strcpy(app.destination, argv[3]);
     }
 
-    strcpy(applayer.port, argv[2]);
+    strcpy(app.port, argv[2]);
 
-    if (applayer.type == EMISSOR) printf("Emissor\n\n");
-    else if (applayer.type == RECETOR) printf("Recetor\n\n");
+    if (app.type == EMISSOR) printf("Emissor\n\n");
+    else if (app.type == RECETOR) printf("Recetor\n\n");
 
-    int fd = llopen(applayer.port, applayer.type);
+    int fd = llopen(app.port, app.type);
     if (fd < 0) {
         printf("Error in llopen()...\n");
         exit(2);
     }
     
     /* TO DO
-    if (applayer.type == EMISSOR) appEmissor(fd, applayer.filenameArg);
-    else if (applayer.type == RECETOR) appRecetor(fd);
+    if (app.type == EMISSOR) appEmissor(fd, app.filename);
+    else if (app.type == RECETOR) appRecetor(fd);
     */
 
     if (llclose(fd) < 0) {
@@ -48,8 +50,8 @@ int main(int argc, char** argv) {
         exit(3);
     }
 
-    if (applayer.type == EMISSOR) printf("Emissor terminou execução.");
-    else if (applayer.type == RECETOR) printf("Recetor terminou execução.");
+    if (app.type == EMISSOR) printf("Emissor terminou execução.");
+    else if (app.type == RECETOR) printf("Recetor terminou execução.");
 
     return 0;
 }
