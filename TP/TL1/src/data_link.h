@@ -14,6 +14,33 @@
 #include <ctype.h>
 #include <errno.h>
 
+#include "state_machine.h"
+
+enum readingType {openR, readR, closeDISC, closeUA}; // Enum of possible modifications to readingCycle()
+enum writingType {trans_SET, writeR, trans_DISC_UA}; // Enum of possible modifications to writeCycle()
+
+/**
+ * @brief Function to read a byte from fd
+ * 
+ * @param type variable to distinguish warning messages
+ * @param fd file descriptor
+ * @param c controll byte, used with type readR
+ * @param dataBuf buffer to read data, used with type readR
+ * @param retBufferSize variable to store dataBuf size, used with type readR
+ * @return int 
+ */
+int readingCycle(enum readingType type, int fd, unsigned char *c, unsigned char **dataBuf, int *retBufferSize);
+/**
+ * @brief Function used to write to fd
+ * 
+ * @param type variable to distinguish warning messages
+ * @param fd file descriptor
+ * @param buf buffer of content to write
+ * @param bufsize lenght of buffer in bytes
+ * @return int negative in case of errors, 0 otherwise
+ */
+int writeCycle(enum writingType type, int fd, unsigned char *buf, int bufsize);
+
 #define SET_UA_SIZE 5
 
 #define FLAG 0x7E
@@ -51,6 +78,8 @@ struct linkLayer {
 };
 
 struct linkLayer ll;
+struct termios oldtio;
+volatile int fail;
 
 void print_0x(unsigned char a);
 void atende();
