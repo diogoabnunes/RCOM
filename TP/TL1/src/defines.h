@@ -25,6 +25,9 @@
 #define FALSE 0
 #define TRUE 1
 
+#define TIMEOUT 3
+#define TRIES 3
+
 #define MAX_SIZE 32
 
 #define DATA 0x01

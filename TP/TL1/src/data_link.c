@@ -1,5 +1,7 @@
 #include "data_link.h"
 
+static struct sigaction old;
+
 void print_0x(unsigned char a) {
   if (a == 0) {
     printf("0x00 "); return;
@@ -20,7 +22,10 @@ void setting_alarm_handler() {
   sigemptyset(&sa.sa_mask);
   sa.sa_handler = atende;
   sa.sa_flags = 0;
-  sigaction(SIGALRM, &sa, NULL);
+  if (sigaction(SIGALRM, &sa, &old) < 0) {
+    printf("Erro no sigaction\n");
+    return;
+  }
 }
 
 int emissor_SET(int fd) {
@@ -136,8 +141,8 @@ int llinit(int *fd, char *port) {
     strcpy(ll.port, port);
     ll.baudRate = BAUDRATE;
     ll.sequenceNumber = 0x00;
-    ll.timeout = 3;
-    ll.numTransmissions = 3;
+    ll.timeout = TIMEOUT;
+    ll.numTransmissions = TRIES;
 
     struct termios newtio;
 
@@ -209,9 +214,21 @@ int llwrite(int fd, char *buffer, int length) {
   for (int i = 1; i < length; i++) {
     BCC2 = BCC(BCC2, buffer[i]);
   }
-  unsigned char endBuf[2];
-  endBuf[0] = BCC2;
-  endBuf[1] = FLAG;
+
+  unsigned char *endBuf = (unsigned char *)malloc(2);
+  int endBufSize = 2;
+  // Stuffing
+  if (BCC2 == 0x7E || BCC2 == 0x7D) {
+    endBufSize = 3;
+    endBuf = (unsigned char *)realloc(endBuf, endBufSize);
+    endBuf[0] = 0x7D;
+    endBuf[1] = XOR(BCC2, 0x20);
+    endBuf[2] = FLAG;
+  }
+  else {
+    endBuf[0] = BCC2;
+    endBuf[1] = FLAG;
+  }
 
   int size = length;
   unsigned char *dataBuf = (unsigned char *) malloc(size);
@@ -241,18 +258,18 @@ int llwrite(int fd, char *buffer, int length) {
   }
 
   // Criação de Trama I: init + dados + end
-  int allSize = 4 + size + 2, datai = 0, endi;
+  int allSize = 4 + size + endBufSize, datai = 0, endi = 0;
   unsigned char allBuf[allSize];
   for (int i = 0; i < allSize; i++) {
     if (i < 4) {
       allBuf[i] = initBuf[i];
     }
     else if (datai < size) {
-      allBuf[i] = dataBuf[i];
+      allBuf[i] = dataBuf[datai];
       dataBuf++;
     }
-    else if (endi < 2) {
-      allBuf[i] = endBuf[i];
+    else if (endi < endBufSize) {
+      allBuf[i] = endBuf[endi];
       endi++;
     }
   }
@@ -304,6 +321,7 @@ int llwrite(int fd, char *buffer, int length) {
   
   alarm(0);
   ll.sequenceNumber = XOR(ll.sequenceNumber, 0x01);
+  // free?
 
   return 0;
 }
