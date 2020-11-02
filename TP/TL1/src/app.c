@@ -16,7 +16,6 @@ int appEmissor(int fd, char *file){
     int num = 0;
     
     struct stat ficheiro;
-
     if (stat(app.filename, &ficheiro)<0){
         printf("error appEmissor.\n");
         return -1;
@@ -147,7 +146,7 @@ int appRecetor(int fd){
             write(fdfile,&pack[4], psize);
 
             if (pack[1] != counter){
-                lseek(fdfile, 0 , SEEK_HOLE);
+                lseek(fdfile, 0 , 4);
             }
 
             if (pack[1]== counter){
@@ -207,10 +206,7 @@ int main(int argc, char** argv) {
     
 
     if (app.type == EMISSOR) appEmissor(fd, app.filename);
-
-    /* TO DO
     else if (app.type == RECETOR) appRecetor(fd);
-    */
 
     if (llclose(fd) < 0) {
         printf("Erro em llclose()\n");

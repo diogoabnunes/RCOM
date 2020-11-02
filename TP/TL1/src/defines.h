@@ -25,6 +25,13 @@
 #define FALSE 0
 #define TRUE 1
 
-#define MAX_SIZE 1024
+#define MAX_SIZE 32
+
+#define DATA 0x01
+#define C_START 0x02
+#define END 0x03
+
+#define T_SIZE 0x00
+#define T_NAME 0x01
 
 #endif // DEFINES_H
