@@ -113,7 +113,7 @@ int SM_C_RCV(unsigned char byte) {
     if (byte == BCC(checkBuf[0], checkBuf[1])) {
         if (SM.type == READ && wrongC) {
             printf("Este pacote já tinha sido recebido\n");
-            return 2;
+            return -2;
         }
         SM.state = BCC_OK;
         if (SM.type == READ) frameIndex++;
@@ -130,16 +130,16 @@ int SM_C_RCV(unsigned char byte) {
 
             case WRITE:
                 printf("Erro no byte BCC\n");
-                return 1;
+                return -1;
                 break;
 
             case READ:
                 printf("BCC recebido com erros\n");
-                return 1;
+                return -1;
                 break;
 
             default: 
-                return 1;
+                return -1;
                 break;
         }
     }
@@ -157,8 +157,15 @@ int SM_BCC_OK(unsigned char byte, unsigned char **buf, int *size) {
             *buf = (unsigned char *)malloc(frameIndex-4-2);
             *size = 0;
 
+            unsigned char destuffing;
+            int lesssize = 2;
+            if (ll.frame[frameIndex-3] != 0x7D) destuffing= ll.frame[frameIndex-2];
+            else {
+                destuffing = XOR(ll.frame[frameIndex-2], 0x20);
+                lesssize = 3;
+            }
             // De-Stuffing
-            for (int i = 4; i < frameIndex - 2; i++) {
+            for (int i = 4; i < frameIndex - lesssize; i++) {
                 if (ll.frame[i] != 0x7D || 0x7E) {
                     (*buf)[*size] = ll.frame[i];
                 }
@@ -175,13 +182,13 @@ int SM_BCC_OK(unsigned char byte, unsigned char **buf, int *size) {
                 BCC2 = BCC(BCC2, (*buf)[i]);
             }
 
-            if (ll.frame[frameIndex-2] == BCC2) {
+            if (destuffing == BCC2) {
                 ll.sequenceNumber = XOR(ll.sequenceNumber, 0x01);
                 SM.state = SM_STOP;
             }
             else {
                 printf("BCC recebido com erros\n");
-                return 1;
+                return -1;
             }
         }
         else return 1;

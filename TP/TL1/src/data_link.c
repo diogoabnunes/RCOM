@@ -340,16 +340,17 @@ int llread(int fd, unsigned char *buffer) {
     res = read(fd, buf, 1);
     if (res == -1) {
       printf("Erro a receber trama I...\n");
-      return 1;
+      break;
     }
 
     int smRead = stateMachine(buf[0], &dataBuf, &size);
-    if (smRead == 1) {
+    if (smRead == -1) {
       cValue = C_REJ(ll.sequenceNumber);
       printf("Erro no BCC...\n");
-      break;
+      tcflush(fd, TCIFLUSH);
+      return -1;
     }
-    else if (smRead == 2) {
+    else if (smRead == -2) {
       cValue = C_RR(ll.sequenceNumber);
       printf("Número de sequência errado em no byte C...\n");
       break;
@@ -370,6 +371,7 @@ int llread(int fd, unsigned char *buffer) {
   reply[3] = BCC(A_EmiRec, cValue);
   reply[4] = FLAG;
 
+  tcflush(fd, TCOFLUSH);
   res = write(fd, reply, 5);
   if (res == -1) {
     printf("Erro a escrever resposta em llread()...\n");

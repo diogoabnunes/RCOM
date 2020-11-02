@@ -148,7 +148,7 @@ int appRecetor(int fd){
             write(fdfile,&pack[4], psize);
 
             if (pack[1] != counter){
-                lseek(fdfile, 0 , SEEK_HOLE);
+                lseek(fdfile, 0 , 4);
             }
 
             if (pack[1]== counter){
