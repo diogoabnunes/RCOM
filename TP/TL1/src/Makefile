@@ -14,5 +14,3 @@ app: $(OBJ)
 
 clean:
 	@rm $(TARGETS)
-
-# gcc app.c data_link.c -o app
