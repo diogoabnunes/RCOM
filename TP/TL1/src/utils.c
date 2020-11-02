@@ -1,7 +1,5 @@
 #include "utils.h"
 
-static struct sigaction old;
-
 void print_0x(unsigned char a) {
   if (a == 0) {
     printf("0x00 "); return;
@@ -15,18 +13,6 @@ void atende() {
     printf("Alarm!\n");
     return;
   }
-}
-
-int setting_alarm_handler() {
-  struct sigaction sa;
-  sigemptyset(&sa.sa_mask);
-  sa.sa_handler = atende;
-  sa.sa_flags = 0;
-  if (sigaction(SIGALRM, &sa, &old) < 0) {
-    printf("Erro no sigaction\n");
-    return -1;
-  }
-  return 0;
 }
 
 int llinit(int *fd, char *port) {
@@ -68,25 +54,6 @@ int llinit(int *fd, char *port) {
     printf("New termios structure set\n");
 
     return 0;
-}
-
-int fillFinalBuffer(unsigned char* finalBuffer, unsigned char* initBuf, unsigned char* endBuf, int endBufSize, unsigned char* dataBuf, int size) {
-  int finalIndex = 0, dataIndex = 0, endBufIndex=0;
-
-  while (finalIndex < 4){
-  finalBuffer[finalIndex] = initBuf[finalIndex];
-  finalIndex++;
-  }
-  while (dataIndex < size){
-    finalBuffer[finalIndex] = dataBuf[dataIndex];
-    finalIndex++; dataIndex++;
-  }
-  while (endBufIndex < endBufSize){
-    finalBuffer[finalIndex] = endBuf[endBufIndex];
-    finalIndex++; endBufIndex++;
-  }
-
-  return finalIndex;
 }
 
 int ciclo_write(int fd, unsigned char *buf, int bufsize) {

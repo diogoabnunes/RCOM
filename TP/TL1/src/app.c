@@ -11,7 +11,7 @@ struct applicationLayer {
 } app;
 
 
-int appEmissor(int fd, char *file){
+int appEmissor(int fd){
     
     struct stat ficheiro;
     if (stat(app.filename, &ficheiro)<0){
@@ -61,11 +61,11 @@ int appEmissor(int fd, char *file){
     }
     cPack[0] = END;
 
-    if (llwrite(fd,cPack,size + 5 + strlen(app.filename)) != 0){
+    if (llwrite(fd,cPack,size + 5 + strlen(app.filename)) < 0){
         printf("erro ao escrever cPack 2 em appEmissor");
         return -1;
     }
-    return 0;
+    return fd;
 }
 
 void file_content(unsigned char *pack, int psize){
@@ -185,8 +185,12 @@ int main(int argc, char** argv) {
         exit(2);
     }
 
-    if (app.type == EMISSOR) appEmissor(fd, app.filename);
-    else if (app.type == RECETOR) appRecetor(fd);
+    if (app.type == EMISSOR) {
+        if (appEmissor(fd) < 0) printf("Erro no appEmissor()....\n");
+    }
+    else if (app.type == RECETOR) {
+        if (appRecetor(fd) < 0) printf("Erro no appRecetor()...\n");
+    }
 
     if (llclose(fd) < 0) {
         printf("Erro em llclose()\n");

@@ -11,7 +11,6 @@
 #include <unistd.h>
 #include <signal.h>
 #include <string.h>
-#include <ctype.h>
 #include <errno.h>
 
 #include "state_machine.h"
@@ -19,10 +18,10 @@
 #include "utils.h"
 
 struct linkLayer {
-  unsigned int type;
-  char port[20];
+  unsigned int type; // EMISSOR/RECETOR
+  char port[15];     // /dev/ttySx
   int baudRate;
-  unsigned char sequenceNumber;
+  unsigned char sequenceNumber; // Ns: 0/1
   unsigned int timeout;
   unsigned int numTransmissions;
   unsigned char frame[2*MAX_SIZE];

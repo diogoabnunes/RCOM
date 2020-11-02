@@ -1,13 +1,22 @@
 #include "data_link.h"
 
+static struct sigaction old;
+
 int llopen(char *port, int flag) {
   int fd;
-  if (llinit(&fd, port) != 0) {
-    printf("Error in llinit()...\n");
-    return 1;
+
+  // Initializing Connection
+  if (llinit(&fd, port) < 0) {
+    printf("Erro em llinit()...\n");
+    return -1;
   }
 
-  if (setting_alarm_handler() != 0) {
+  // Setting Alarm Handler
+  struct sigaction sa;
+  sigemptyset(&sa.sa_mask);
+  sa.sa_handler = atende;
+  sa.sa_flags = 0;
+  if (sigaction(SIGALRM, &sa, &old) < 0) {
     printf("Erro no sigaction...\n");
     return -1;
   }
@@ -29,24 +38,25 @@ int llopen(char *port, int flag) {
 
 int llwrite(int fd, char *buffer, int length) {
   if (length > MAX_SIZE) {
-    printf("A mensagem tem mais do que MAX_SIZE...\n");
-    return 1;
+    printf("A mensagem é maior do que MAX_SIZE (%d)...\n", MAX_SIZE);
+    return -1;
   }
 
+  // Início de trama I
   unsigned char initBuf[4];
   initBuf[0] = FLAG;
   initBuf[1] = A_EmiRec;
   initBuf[2] = C_I(ll.sequenceNumber);
   initBuf[3] = BCC(A_EmiRec, C_I(ll.sequenceNumber));
 
+  // Fim de trama I
   unsigned char BCC2 = buffer[0];
   for (int i = 1; i < length; i++) {
     BCC2 = BCC(BCC2, buffer[i]);
   }
-
   unsigned char *endBuf = (unsigned char *)malloc(2);
   int endBufSize = 2;
-  // Stuffing
+  // Stuffing no BCC2
   if (BCC2 == 0x7E || BCC2 == 0x7D) {
     endBufSize = 3;
     endBuf = (unsigned char *)realloc(endBuf, endBufSize);
@@ -59,6 +69,7 @@ int llwrite(int fd, char *buffer, int length) {
     endBuf[1] = FLAG;
   }
 
+  // Stuffing nos dados
   int size = length;
   unsigned char *dataBuf = (unsigned char *) malloc(size);
   for (int i = 0, j = 0; i < length; i++, j++) {
@@ -67,9 +78,6 @@ int llwrite(int fd, char *buffer, int length) {
       size++;
       dataBuf = (unsigned char *) realloc(dataBuf, size);
 
-      size++;
-      dataBuf = (unsigned char *) realloc(dataBuf, size); 
-
       dataBuf[j+1] = buffer[i] ^ 0x20;
       dataBuf[j] = 0x7D;
       j++;
@@ -77,8 +85,21 @@ int llwrite(int fd, char *buffer, int length) {
     else dataBuf[j] = buffer[i];
   }
 
-  unsigned char allBuf[size + 4 + endBufSize];
-  fillFinalBuffer(allBuf, initBuf, endBuf, endBufSize, dataBuf, size);
+  int allSize = 4 + size + endBufSize, datai = 0, endi = 0;
+  unsigned char allBuf[allSize];
+  for (int i = 0; i < allSize; i++) {
+    if (i < 4) {
+      allBuf[i] = initBuf[i];
+    }
+    else if (datai < size) {
+      allBuf[i] = dataBuf[datai];
+      datai++;
+    }
+    else if (endi < endBufSize) {
+      allBuf[i] = endBuf[endi];
+      endi++;
+    }
+  }
 
   settingUpSM(WRITE, START, A_EmiRec, C_RR(XOR(ll.sequenceNumber, 0x01)));
   
