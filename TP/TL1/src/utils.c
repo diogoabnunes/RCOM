@@ -17,15 +17,16 @@ void atende() {
   }
 }
 
-void setting_alarm_handler() {
+int setting_alarm_handler() {
   struct sigaction sa;
   sigemptyset(&sa.sa_mask);
   sa.sa_handler = atende;
   sa.sa_flags = 0;
   if (sigaction(SIGALRM, &sa, &old) < 0) {
     printf("Erro no sigaction\n");
-    return;
+    return -1;
   }
+  return 0;
 }
 
 int llinit(int *fd, char *port) {
@@ -67,6 +68,106 @@ int llinit(int *fd, char *port) {
     printf("New termios structure set\n");
 
     return 0;
+}
+
+int fillFinalBuffer(unsigned char* finalBuffer, unsigned char* initBuf, unsigned char* endBuf, int endBufSize, unsigned char* dataBuf, int size) {
+  int finalIndex = 0, dataIndex = 0, endBufIndex=0;
+
+  while (finalIndex < 4){
+  finalBuffer[finalIndex] = initBuf[finalIndex];
+  finalIndex++;
+  }
+  while (dataIndex < size){
+    finalBuffer[finalIndex] = dataBuf[dataIndex];
+    finalIndex++; dataIndex++;
+  }
+  while (endBufIndex < endBufSize){
+    finalBuffer[finalIndex] = endBuf[endBufIndex];
+    finalIndex++; endBufIndex++;
+  }
+
+  return finalIndex;
+}
+
+int ciclo_write(int fd, unsigned char *buf, int bufsize) {
+    int num_try = 0, res;
+    volatile int STOP = FALSE;
+
+    // Envio de Trama I
+    do {
+        num_try++;
+        res = write(fd, buf, bufsize);
+        tcflush(fd, TCIFLUSH);
+        if (res == -1) {
+        printf("ll_write(): Erro a enviar Trama I\n");
+        return 1;
+    }
+
+    alarm(ll.timeout);
+    SM.state = START;
+    fail = FALSE;
+    unsigned char readBuf[1];
+
+    while (STOP == FALSE) {
+      res = read(fd, readBuf, 1);
+
+      if (res == -1 && errno == EINTR) {
+        printf("Erro a receber RR do recetor...\n");
+        if (num_try < ll.numTransmissions) {
+          printf("Nova tentativa...\n");
+        }else {
+          printf("Excedeu numero de tentativas\n");
+          return -1;
+        }
+      }
+      else if (res == -1) {
+          printf("Erro a receber RR do buffer\n");
+          return 1;
+      }
+
+      if (stateMachine(readBuf[0], NULL, NULL) < 0) {
+        printf("Erro a receber RR ou REJ...\n");
+        fail = TRUE;
+        alarm(0);
+        break;
+      }
+
+      if (SM.state == SM_STOP || fail) STOP = TRUE;
+    }
+
+  } while (num_try < ll.numTransmissions && fail);
+  alarm(0);
+  return 0;
+}
+
+int ciclo_read(int fd, unsigned char *C, unsigned char **dataBuf, int *size) {
+  volatile int STOP = FALSE;
+  unsigned char buf[1];
+  int res;
+
+  while (STOP == FALSE) {
+    res = read(fd, buf, 1);
+    if (res == -1) {
+      printf("Erro a receber trama I...\n");
+      return -1;
+    }
+
+    int smRead = stateMachine(buf[0], dataBuf, size);
+    if (smRead == -1) {
+      *C = C_REJ(ll.sequenceNumber);
+      printf("Erro no BCC...\n");
+      return -1;
+    }
+    else if (smRead == -2) {
+      *C = C_RR(ll.sequenceNumber);
+      printf("Número de sequência errado em no byte C...\n");
+      break;
+    }
+    *C = C_RR(ll.sequenceNumber);
+
+    if (SM.state == SM_STOP) STOP = TRUE;
+  }
+  return 0;
 }
 
 int emissor_SET(int fd) {

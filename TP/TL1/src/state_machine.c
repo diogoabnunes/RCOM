@@ -140,7 +140,7 @@ int SM_C_RCV(unsigned char byte) {
                 break;
 
             case READ:
-                printf("BCC recebido com erros\n");
+                printf("BCC recebido com erros1\n");
                 return -1;
                 break;
 
@@ -193,7 +193,7 @@ int SM_BCC_OK(unsigned char byte, unsigned char **buf, int *size) {
                 SM.state = SM_STOP;
             }
             else {
-                printf("BCC recebido com erros\n");
+                printf("BCC recebido com erros2\n");
                 return -1;
             }
         }

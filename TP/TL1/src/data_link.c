@@ -7,7 +7,10 @@ int llopen(char *port, int flag) {
     return 1;
   }
 
-  setting_alarm_handler();
+  if (setting_alarm_handler() != 0) {
+    printf("Erro no sigaction...\n");
+    return -1;
+  }
 
   switch (flag) {
       case EMISSOR: {
@@ -74,73 +77,16 @@ int llwrite(int fd, char *buffer, int length) {
     else dataBuf[j] = buffer[i];
   }
 
-  // Criação de Trama I: init + dados + end
-  int allSize = 4 + size + endBufSize, datai = 0, endi = 0;
-  unsigned char allBuf[allSize];
-  for (int i = 0; i < allSize; i++) {
-    if (i < 4) {
-      allBuf[i] = initBuf[i];
-    }
-    else if (datai < size) {
-      allBuf[i] = dataBuf[datai];
-      dataBuf++;
-    }
-    else if (endi < endBufSize) {
-      allBuf[i] = endBuf[endi];
-      endi++;
-    }
-  }
+  unsigned char allBuf[size + 4 + endBufSize];
+  fillFinalBuffer(allBuf, initBuf, endBuf, endBufSize, dataBuf, size);
 
   settingUpSM(WRITE, START, A_EmiRec, C_RR(XOR(ll.sequenceNumber, 0x01)));
-
-  int num_try = 0, res;
-  volatile int STOP = FALSE;
-
-  // Envio de Trama I
-  do {
-    num_try++;
-    res = write(fd, allBuf, allSize);
-    tcflush(fd, TCIFLUSH);
-    if (res == -1) {
-      printf("ll_write(): Erro a enviar Trama I\n");
-      return 1;
-    }
-
-    alarm(ll.timeout);
-    SM.state = START;
-    fail = FALSE;
-    unsigned char readBuf[1];
-
-    while (STOP == FALSE) {
-      res = read(fd, readBuf, 1);
-
-      if (res == -1 && errno == EINTR) {
-        printf("Erro a receber RR do recetor...\n");
-        if (num_try < ll.numTransmissions) {
-          printf("Nova tentativa...\n");
-        }else {
-          printf("Excedeu numero de tentativas\n");
-          return -1;
-        }
-      }
-      else if (res == -1) {
-          printf("Erro a receber RR\n");
-          return 1;
-      }
-
-      if (stateMachine(readBuf[0], NULL, NULL) < 0) {
-        printf("Erro a receber RR ou REJ...\n");
-        fail = TRUE;
-        alarm(0);
-        break;
-      }
-
-      if (SM.state == SM_STOP || fail) STOP = TRUE;
-    }
-
-  } while (num_try < ll.numTransmissions && fail);
   
-  alarm(0);
+  if (ciclo_write(fd, allBuf, sizeof(allBuf)) < 0) {
+    printf("Falha no ciclo write\n");
+    return -1;
+  }
+  
   ll.sequenceNumber = XOR(ll.sequenceNumber, 0x01);
   free(dataBuf);
   free(endBuf);
@@ -154,32 +100,10 @@ int llread(int fd, unsigned char *buffer) {
   int size;
   unsigned char cValue;
 
-  volatile int STOP = FALSE;
-  unsigned char buf[1];
-  int res;
-
-  while (STOP == FALSE) {
-    res = read(fd, buf, 1);
-    if (res == -1) {
-      printf("Erro a receber trama I...\n");
-      break;
-    }
-
-    int smRead = stateMachine(buf[0], &dataBuf, &size);
-    if (smRead == -1) {
-      cValue = C_REJ(ll.sequenceNumber);
-      printf("Erro no BCC...\n");
-      tcflush(fd, TCIFLUSH);
-      return -1;
-    }
-    else if (smRead == -2) {
-      cValue = C_RR(ll.sequenceNumber);
-      printf("Número de sequência errado em no byte C...\n");
-      break;
-    }
-    cValue = C_RR(ll.sequenceNumber);
-
-    if (SM.state == SM_STOP) STOP = TRUE;
+  if (ciclo_read(fd, &cValue, &dataBuf, &size) < 0) {
+    printf("Erro no ciclo read\n");
+    tcflush(fd, TCIFLUSH);
+    return -1;
   }
 
   unsigned char reply[5];
@@ -190,10 +114,10 @@ int llread(int fd, unsigned char *buffer) {
   reply[4] = FLAG;
 
   tcflush(fd, TCOFLUSH);
-  res = write(fd, reply, 5);
+  int res = write(fd, reply, 5);
   if (res == -1) {
     printf("Erro a escrever resposta em llread()...\n");
-    return 1;
+    return -1;
   }
 
   for (int i = 0; i < size; i++) {
