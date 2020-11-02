@@ -10,20 +10,22 @@ struct applicationLayer {
   off_t filesize;
 } app;
 
+
 int appEmissor(int fd, char *file){
-    
+
     int max = 32;
     int num = 0;
-    
+
     struct stat ficheiro;
+
     if (stat(app.filename, &ficheiro)<0){
-        printf("error appEmissor.\n");
+        printf("error stat appEmissor.\n");
         return -1;
     }
 
     int fdfile = open(app.filename,O_RDONLY);
     if (fdfile <0){
-        printf("error appEmissor.\n");
+        printf("erro ao abrir ficheiro em appEmissor.\n");
         return -1;
     }
 
@@ -32,7 +34,7 @@ int appEmissor(int fd, char *file){
     int size = sizeof(ficheiro.st_size);
     cPack[0] = 0x02;
     cPack[1] = 0x00;
-    cPack[2] = size; 
+    cPack[2] = size;
     memcpy(&cPack[3],&ficheiro.st_size,size);
 
     cPack[size+3] = 0x01;
@@ -42,7 +44,7 @@ int appEmissor(int fd, char *file){
     memcpy(&cPack[size+5],app.filename,strlen(app.filename));
 
     if(llwrite(fd,cPack,size + 5 + strlen(app.filename))<0){
-        printf("error appEmissor");
+        printf("erro ao escrever cPack em appEmissor");
         return -1;
     }
 
@@ -52,7 +54,7 @@ int appEmissor(int fd, char *file){
     char * file_data[max];
     int bytes_number;
     while( (bytes_number = read(fdfile,file_data,max-4)) != 0){
-        
+
         dPack[0] = 0x01;
         dPack[1] = num % 255;
         dPack[2] = bytes_number / 256;
@@ -61,20 +63,20 @@ int appEmissor(int fd, char *file){
 
 
         if (llwrite(fd,dPack,bytes_number+4) < 0){
-        printf("error appEmissor");
+        printf("erro ao escrever dPack em appEmissor");
         return -1;
         }
 
 
         num++;
-        
+
 
     }
 
     cPack[0] = 0x03;
 
     if(llwrite(fd,cPack,size + 5 + strlen(app.filename))<0){
-        printf("error appEmissor");
+        printf("erro ao escrever cPack 2 em appEmissor");
         return -1;
     }
 
@@ -113,18 +115,18 @@ void file_content(unsigned char *pack, int psize){
 int appRecetor(int fd){
     int max = 32;
     unsigned char pack[max];
-    
-    
-    
+
+
+
 
     int fdfile;
 
     while(1){
         int lido = llread(fd,pack);
         int psize;
-        
+
         if(lido<0)
-            printf("error appRecetor");
+            printf("nada foi lido em appRecetor");
 
         if (pack[0] == 0x02){
             file_content(pack, lido);
@@ -137,22 +139,22 @@ int appRecetor(int fd){
 
             int counter=0, counter2 = 0;
             int move = 0;
-            
+
             if (pack[1] != counter){
                 off_t offset = (pack[1] + move) * (max-4);
                 lseek(fdfile, offset, SEEK_SET);
             }
-            
+
             write(fdfile,&pack[4], psize);
 
             if (pack[1] != counter){
-                lseek(fdfile, 0 , 4);
+                lseek(fdfile, 0 , SEEK_HOLE);
             }
 
             if (pack[1]== counter){
                 counter++;
             }
-            
+
             counter2 = counter;
             counter %= 255;
 
@@ -164,15 +166,16 @@ int appRecetor(int fd){
         else if (pack[0] == 0x03){
             break;
         }
-        
+
     }
 
     if (close(fdfile)<0){
-        printf("Error closing file\n");
+        printf("erro ao fechar ficheiro em appRecetor\n");
     }
-    
+
     return fd;
 }
+
 
 
 
@@ -203,10 +206,13 @@ int main(int argc, char** argv) {
         printf("Error in llopen()...\n");
         exit(2);
     }
-    
+
+
 
     if (app.type == EMISSOR) appEmissor(fd, app.filename);
     else if (app.type == RECETOR) appRecetor(fd);
+
+
 
     if (llclose(fd) < 0) {
         printf("Erro em llclose()\n");
@@ -218,4 +224,3 @@ int main(int argc, char** argv) {
 
     return 0;
 }
-
