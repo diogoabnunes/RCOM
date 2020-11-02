@@ -11,41 +11,29 @@
 #include <unistd.h>
 #include <signal.h>
 #include <string.h>
-#include <ctype.h>
 #include <errno.h>
 
 #include "state_machine.h"
 #include "defines.h"
+#include "utils.h"
 
 struct linkLayer {
-  unsigned int type;
-  char port[20];
+  unsigned int type; // EMISSOR/RECETOR
+  char port[15];     // /dev/ttySx
   int baudRate;
-  unsigned char sequenceNumber;
+  unsigned char sequenceNumber; // Ns: 0/1
   unsigned int timeout;
   unsigned int numTransmissions;
-  unsigned char frame[MAX_SIZE];
+  unsigned char frame[2*MAX_SIZE];
 };
 
 struct linkLayer ll;
 struct termios oldtio;
 volatile int fail;
 
-void print_0x(unsigned char a);
-void atende();
-void setting_alarm_handler();
-
-int emissor_SET(int fd);
-int recetor_UA(int fd);
-
-int llinit(int *fd, char *port);
 int llopen(char *port, int type);
-
 int llwrite(int fd, char *buffer, int length);
 int llread(int fd, unsigned char *buffer);
-
-int emissor_DISC(int fd);
-int recetor_DISC(int fd);
 int llclose(int fd);
 
 #endif // DATA_LINK_H

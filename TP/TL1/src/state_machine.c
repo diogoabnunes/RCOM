@@ -1,5 +1,8 @@
 #include "state_machine.h"
 
+static unsigned char checkBuf[2];
+static int frameIndex, wrongC;
+
 void settingUpSM(enum stateMachineType type, enum stateMachineState state, unsigned char A, unsigned char C) {
     SM.type = type;
     SM.state = state;
@@ -30,7 +33,8 @@ int stateMachine(unsigned char byte, unsigned char **buf, int *size) {
             return 0;
             break;
         default:
-            return 1;
+            printf("Valor da máquina de estados desconhecido\n");
+            return -1;
             break;
     }
 }
@@ -44,7 +48,9 @@ int SM_START(unsigned char byte) {
             frameIndex++;
         }
     }
-    else SM.state = FLAG_RCV;
+    else {
+        if (byte == FLAG) SM.state = FLAG_RCV;
+    }
     return 0;
 }
 
@@ -72,7 +78,7 @@ int SM_A_RCV(unsigned char byte) {
         case WRITE:
             if (byte == C_REJ(XOR(ll.sequenceNumber, 0x01))) {
                 printf("C_REJ recebido\n");
-                return 1;
+                return -1;
             }
             if (byte == SM.C) {
                 SM.state = C_RCV;
@@ -103,7 +109,7 @@ int SM_A_RCV(unsigned char byte) {
             break;
 
         default:
-            return 1;
+            return -1;
             break;
     }
     return 0;
@@ -113,7 +119,7 @@ int SM_C_RCV(unsigned char byte) {
     if (byte == BCC(checkBuf[0], checkBuf[1])) {
         if (SM.type == READ && wrongC) {
             printf("Este pacote já tinha sido recebido\n");
-            return 2;
+            return -2;
         }
         SM.state = BCC_OK;
         if (SM.type == READ) frameIndex++;
@@ -130,16 +136,16 @@ int SM_C_RCV(unsigned char byte) {
 
             case WRITE:
                 printf("Erro no byte BCC\n");
-                return 1;
+                return -1;
                 break;
 
             case READ:
-                printf("BCC recebido com erros\n");
-                return 1;
+                printf("BCC recebido com erros1\n");
+                return -1;
                 break;
 
             default: 
-                return 1;
+                return -1;
                 break;
         }
     }
@@ -157,9 +163,16 @@ int SM_BCC_OK(unsigned char byte, unsigned char **buf, int *size) {
             *buf = (unsigned char *)malloc(frameIndex-4-2);
             *size = 0;
 
+            unsigned char destuffing;
+            int lesssize = 2;
+            if (ll.frame[frameIndex-3] != 0x7D) destuffing= ll.frame[frameIndex-2];
+            else {
+                destuffing = XOR(ll.frame[frameIndex-2], 0x20);
+                lesssize = 3;
+            }
             // De-Stuffing
-            for (int i = 4; i < frameIndex - 2; i++) {
-                if (ll.frame[i] != 0x7D || 0x7E) {
+            for (int i = 4; i < frameIndex - lesssize; i++) {
+                if (ll.frame[i] != 0x7D) {
                     (*buf)[*size] = ll.frame[i];
                 }
                 else {
@@ -168,20 +181,20 @@ int SM_BCC_OK(unsigned char byte, unsigned char **buf, int *size) {
                 }
                 (*size)++;
             }
-            *buf = (unsigned char *)realloc(*buf, *size);
+            *buf = (unsigned char *)realloc(*buf, (*size));
         
             unsigned char BCC2 = (*buf)[0];
-            for (int i = 1; i < (*size); i++) {
+            for (int i = 1; i < *size; i++) {
                 BCC2 = BCC(BCC2, (*buf)[i]);
             }
 
-            if (ll.frame[frameIndex-2] == BCC2) {
+            if (destuffing == BCC2) {
                 ll.sequenceNumber = XOR(ll.sequenceNumber, 0x01);
                 SM.state = SM_STOP;
             }
             else {
-                printf("BCC recebido com erros\n");
-                return 1;
+                printf("BCC recebido com erros2\n");
+                return -1;
             }
         }
         else return 1;

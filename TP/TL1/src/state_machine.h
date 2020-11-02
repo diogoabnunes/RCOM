@@ -26,8 +26,6 @@ struct stateMachine {
 };
 
 struct stateMachine SM;
-unsigned char checkBuf[2];
-int frameIndex, wrongC;
 
 void settingUpSM(enum stateMachineType type, enum stateMachineState state, unsigned char A, unsigned char C);
 
