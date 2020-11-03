@@ -150,6 +150,7 @@ int llread(int fd, unsigned char *buffer) {
 }
 
 int llclose(int fd) {
+  printf("\n");
   int ret = fd;
 
   switch (ll.type) {

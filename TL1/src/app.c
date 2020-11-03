@@ -56,7 +56,7 @@ int appEmissor(int fd, char *file){
         dPack[3] = bytes_number % 256; //L1 resto
         memcpy(&dPack[4],file_data,bytes_number); //dados
 
-        if (llwrite(fd,dPack,bytes_number+4) != 0){
+        if (llwrite(fd,dPack,bytes_number+4) < 0){
           //escreve os dados para fd
             printf("erro ao escrever dPack em appEmissor");
             return -1;
@@ -65,7 +65,7 @@ int appEmissor(int fd, char *file){
     }
     cPack[0] = END; //pacote de controlo final é igual ao inicial à excessão do parametro cPack[0]
 
-    if (llwrite(fd,cPack,size + 5 + strlen(app.filename)) != 0){
+    if (llwrite(fd,cPack,size + 5 + strlen(app.filename)) < 0){
       //escreve o pacote de controlo final para fd
         printf("erro ao escrever cPack 2 em appEmissor");
         return -1;
