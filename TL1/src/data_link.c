@@ -123,6 +123,7 @@ int llread(int fd, unsigned char *buffer) {
 
   if (ciclo_read(fd, &cValue, &dataBuf, &size) < 0) {
     printf("Erro no ciclo read\n");
+    tcflush(fd, TCIFLUSH);
     return -1;
   }
 
@@ -133,6 +134,7 @@ int llread(int fd, unsigned char *buffer) {
   reply[3] = BCC(A_EmiRec, cValue);
   reply[4] = FLAG;
 
+  tcflush(fd, TCOFLUSH);
   int res = write(fd, reply, 5);
   if (res == -1) {
     printf("Erro a escrever resposta em llread()...\n");

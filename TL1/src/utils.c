@@ -61,6 +61,7 @@ int ciclo_write(int fd, unsigned char *buf, int bufsize) {
   do {
     num_try++;
     int res = write(fd, buf, bufsize);
+    tcflush(fd, TCIFLUSH);
     if (res == -1) {
       printf("ll_write(): Erro a enviar Trama I\n");
       return 1;
