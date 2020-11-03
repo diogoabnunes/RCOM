@@ -59,9 +59,9 @@ int ciclo_write(int fd, unsigned char *buf, int bufsize) {
   volatile int STOP = FALSE;
 
   do {
-    num_try++;
+          num_try++;
+
     int res = write(fd, buf, bufsize);
-    tcflush(fd, TCIFLUSH);
     if (res == -1) {
       printf("ll_write(): Erro a enviar Trama I\n");
       return 1;
@@ -79,14 +79,15 @@ int ciclo_write(int fd, unsigned char *buf, int bufsize) {
         printf("Erro a receber RR do recetor...\n");
         if (num_try < ll.numTransmissions) {
           printf("Nova tentativa...\n");
-        } else {
+        }
+        else {  
           printf("Excedeu numero de tentativas\n");
           return -1;
         }
       }
       else if (res == -1) {
           printf("Erro a receber RR do buffer\n");
-          return 1;
+          return -1;
       }
 
       if (stateMachine(readBuf[0], NULL, NULL) < 0) {

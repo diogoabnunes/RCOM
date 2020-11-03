@@ -26,7 +26,7 @@
 #define BAUDRATE B38400
 #define TIMEOUT 3
 #define TRIES 3
-#define MAX_SIZE 1024
+#define MAX_SIZE 512
 
 #define DATA 0x01
 #define C_START 0x02
