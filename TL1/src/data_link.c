@@ -1,17 +1,17 @@
 #include "data_link.h"
 
-static struct sigaction old;
+static struct sigaction old; // Para usar no restauro do SIGALRM
 
 int llopen(char *port, int flag) {
   int fd;
 
-  // Initializing Connection
+  // Inicialização da conexão
   if (llinit(&fd, port) < 0) {
     printf("Erro em llinit()...\n");
     return -1;
   }
 
-  // Setting Alarm Handler
+  // Configuração do alarme
   struct sigaction sa;
   sigemptyset(&sa.sa_mask);
   sa.sa_handler = atende;
@@ -85,6 +85,7 @@ int llwrite(int fd, char *buffer, int length) {
     else dataBuf[j] = buffer[i];
   }
 
+  // Construção de Trama I
   int allSize = 4 + size + endBufSize, datai = 0, endi = 0;
   unsigned char allBuf[allSize];
   for (int i = 0; i < allSize; i++) {
@@ -104,15 +105,14 @@ int llwrite(int fd, char *buffer, int length) {
   settingUpSM(WRITE, START, A_EmiRec, C_RR(XOR(ll.sequenceNumber, 0x01)));
   
   if (ciclo_write(fd, allBuf, sizeof(allBuf)) < 0) {
-    printf("Falha no ciclo write\n");
+    printf("llwrite(): Falha no ciclo write\n");
     return -1;
   }
   
   ll.sequenceNumber = XOR(ll.sequenceNumber, 0x01);
-  free(dataBuf);
-  free(endBuf);
 
-  return 0;
+  printf("%ld bytes escritos\n", sizeof(allBuf));
+  return sizeof(allBuf);
 }
 
 int llread(int fd, unsigned char *buffer) {
@@ -145,7 +145,7 @@ int llread(int fd, unsigned char *buffer) {
     buffer[i] = dataBuf[i];
   }
   
-  free(dataBuf);
+  printf("%d bytes lidos\n", size);
   return size;
 }
 

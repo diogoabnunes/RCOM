@@ -1,7 +1,7 @@
 #include "state_machine.h"
 
-static unsigned char checkBuf[2];
-static int frameIndex, wrongC;
+static unsigned char checkBuf[2]; // Para usar na verificação do BCC, guardando Address e Control Byte.
+static int frameIndex, wrongC;    // Variáveis auxiliares para facilitar o uso em SM.type = READ.
 
 void settingUpSM(enum stateMachineType type, enum stateMachineState state, unsigned char A, unsigned char C) {
     SM.type = type;
@@ -160,6 +160,7 @@ int SM_BCC_OK(unsigned char byte, unsigned char **buf, int *size) {
     else {
         frameIndex++;
         if (byte == FLAG) {
+            // De-Stuffing
             *buf = (unsigned char *)malloc(frameIndex-4-2);
             *size = 0;
 
@@ -170,7 +171,6 @@ int SM_BCC_OK(unsigned char byte, unsigned char **buf, int *size) {
                 destuffing = XOR(ll.frame[frameIndex-2], 0x20);
                 lesssize = 3;
             }
-            // De-Stuffing
             for (int i = 4; i < frameIndex - lesssize; i++) {
                 if (ll.frame[i] != 0x7D) {
                     (*buf)[*size] = ll.frame[i];
