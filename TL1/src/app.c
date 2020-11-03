@@ -181,7 +181,7 @@ void parseArguments(int argc, char **argv) {
 }
 
 int main(int argc, char** argv) {
-    printf("\n\n\nAplicação - RCOM - TL1\n");
+    printf("\n\nAplicação - RCOM - TL1\n");
 
     parseArguments(argc, argv);
 
@@ -199,8 +199,8 @@ int main(int argc, char** argv) {
         exit(3);
     }
 
-    if (app.type == EMISSOR) printf("Emissor terminou execução.");
-    else if (app.type == RECETOR) printf("Recetor terminou execução.");
+    if (app.type == EMISSOR) printf("Emissor terminou execução.\n");
+    else if (app.type == RECETOR) printf("Recetor terminou execução.\n");
 
     return 0;
 }
