@@ -43,7 +43,7 @@ int llwrite(int fd, char *buffer, int length) {
   // Fim de trama I
   unsigned char BCC2 = buffer[0];
   for (int i = 1; i < length; i++) {
-    BCC2 = BCC(BCC2, buffer[i]);
+    BCC2 = XOR(BCC2, buffer[i]);
   }
   unsigned char *endBuf = (unsigned char *)malloc(2);
   int endBufSize = 2;

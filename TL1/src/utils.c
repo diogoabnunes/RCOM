@@ -147,7 +147,7 @@ int ciclo_read(int fd, unsigned char *C, unsigned char **dataBuf, int *size) {
 }
 
 int emissor_SET(int fd) {
-  unsigned char buf[SET_UA_SIZE];
+  unsigned char buf[SET_UA_DISC_SIZE];
   buf[0] = FLAG;
   buf[1] = A_EmiRec;
   buf[2] = C_SET;
@@ -161,14 +161,14 @@ int emissor_SET(int fd) {
 
   do {
     num_try++;
-    res = write(fd, buf, SET_UA_SIZE);
+    res = write(fd, buf, SET_UA_DISC_SIZE);
     if (res == -1) {
       printf("Erro no envio de mensagem SET...\n");
       return 1;
     }
     else {
       printf("Mensagem SET enviada: ");
-      for (int i = 0; i < SET_UA_SIZE; i++) print_0x(buf[i]);
+      for (int i = 0; i < SET_UA_DISC_SIZE; i++) print_0x(buf[i]);
       printf("\n");
     }
 
@@ -235,21 +235,21 @@ int recetor_UA(int fd) {
   printf("\n");
 
   // Resposta do recetor
-  unsigned char reply[SET_UA_SIZE];
+  unsigned char reply[SET_UA_DISC_SIZE];
   reply[0] = FLAG;
   reply[1] = A_RecEmi;
   reply[2] = C_UA;
   reply[3] = BCC(A_RecEmi, C_UA);
   reply[4] = FLAG;
 
-  res = write(fd, reply, SET_UA_SIZE);
+  res = write(fd, reply, SET_UA_DISC_SIZE);
   if (res == -1) {
     printf("Erro no envio de mensagem UA\n");
     return 1;
   }
   else { 
     printf("Mensagem UA enviada: ");
-    for (int i = 0; i < SET_UA_SIZE; i++) print_0x(reply[i]);
+    for (int i = 0; i < SET_UA_DISC_SIZE; i++) print_0x(reply[i]);
     printf("\n\n");
   }
 
@@ -257,7 +257,7 @@ int recetor_UA(int fd) {
 }
 
 int emissor_DISC(int fd) {
-  unsigned char msgDISC[SET_UA_SIZE];
+  unsigned char msgDISC[SET_UA_DISC_SIZE];
   msgDISC[0] = FLAG;
   msgDISC[1] = A_EmiRec;
   msgDISC[2] = C_DISC;
@@ -271,14 +271,14 @@ int emissor_DISC(int fd) {
 
   do {
     num_try++;
-    res = write(fd, msgDISC, SET_UA_SIZE);
+    res = write(fd, msgDISC, SET_UA_DISC_SIZE);
     if (res == -1) {
       printf("Erro no envio de mensagem DISC\n");
       return -1;
     }
     else { 
       printf("Mensagem DISC enviada: ");
-      for (int i = 0; i < SET_UA_SIZE; i++) print_0x(msgDISC[i]);
+      for (int i = 0; i < SET_UA_DISC_SIZE; i++) print_0x(msgDISC[i]);
       printf("\n");
     }
 
@@ -319,21 +319,21 @@ int emissor_DISC(int fd) {
   
   alarm(0);
 
-  unsigned char msgUA[SET_UA_SIZE];
+  unsigned char msgUA[SET_UA_DISC_SIZE];
   msgUA[0] = FLAG;
   msgUA[1] = A_EmiRec;
   msgUA[2] = C_UA;
   msgUA[3] = BCC(A_EmiRec, C_UA);
   msgUA[4] = FLAG;
   
-  res = write(fd, msgUA, SET_UA_SIZE);
+  res = write(fd, msgUA, SET_UA_DISC_SIZE);
   if (res == -1) {
     printf("emissor_DISC(): Erro no envio de mensagem UA\n");
     return -1;
   }
   else { 
     printf("Mensagem UA enviada: ");
-    for (int i = 0; i < SET_UA_SIZE; i++) print_0x(msgUA[i]);
+    for (int i = 0; i < SET_UA_DISC_SIZE; i++) print_0x(msgUA[i]);
     printf("\n\n");
   }
 
@@ -362,21 +362,21 @@ int recetor_DISC(int fd) {
   }
 
   // Resposta do recetor
-  unsigned char reply[SET_UA_SIZE];
+  unsigned char reply[SET_UA_DISC_SIZE];
   reply[0] = FLAG;
   reply[1] = A_RecEmi;
   reply[2] = C_DISC;
   reply[3] = BCC(A_RecEmi, C_DISC);
   reply[4] = FLAG;
 
-  res = write(fd, reply, SET_UA_SIZE);
+  res = write(fd, reply, SET_UA_DISC_SIZE);
   if (res == -1) {
     printf("Erro no envio de mensagem DISC\n");
     return -1;
   }
   else {
     printf("\nMensagem DISC enviada: ");
-    for (int i = 0; i < SET_UA_SIZE; i++) print_0x(reply[i]); 
+    for (int i = 0; i < SET_UA_DISC_SIZE; i++) print_0x(reply[i]); 
     printf("\n");
   }
 

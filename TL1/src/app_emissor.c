@@ -1,6 +1,5 @@
 #include "app_emissor.h"
 
-
 int appEmissor(int fd) {
     struct stat ficheiro; //stat ficheiro do pinguim
     if (stat(app.filename, &ficheiro)<0){
