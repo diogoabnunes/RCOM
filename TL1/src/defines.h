@@ -23,10 +23,10 @@
 #define BCC(a,c) (a^c)
 #define XOR(a,b) (a^b)
 
-#define BAUDRATE B38400
+#define BAUDRATE B9600
 #define TIMEOUT 3
 #define TRIES 3
-#define MAX_SIZE 512
+#define MAX_SIZE 1024
 
 #define DATA 0x01
 #define C_START 0x02

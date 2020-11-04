@@ -55,12 +55,11 @@ int llinit(int *fd, char *port) {
 }
 
 int ciclo_write(int fd, unsigned char *buf, int bufsize) {
-  int num_try = 0;
+  int try = 0;
   volatile int STOP = FALSE;
 
   do {
-          num_try++;
-
+    try++;
     int res = write(fd, buf, bufsize);
     if (res == -1) {
       printf("ll_write(): Erro a enviar Trama I\n");
@@ -77,7 +76,7 @@ int ciclo_write(int fd, unsigned char *buf, int bufsize) {
 
       if (res == -1 && errno == EINTR) {
         printf("Erro a receber RR do recetor...\n");
-        if (num_try < ll.numTransmissions) {
+        if (try < ll.numTransmissions) {
           printf("Nova tentativa...\n");
         }
         else {  
@@ -92,14 +91,13 @@ int ciclo_write(int fd, unsigned char *buf, int bufsize) {
 
       if (stateMachine(readBuf[0], NULL, NULL) < 0) {
         printf("Erro a receber RR ou REJ...\n");
-        fail = TRUE;
         alarm(0);
         break;
       }
 
       if (SM.state == SM_STOP || fail) STOP = TRUE;
     }
-  } while (num_try < ll.numTransmissions && fail);
+  } while (try < ll.numTransmissions && fail);
 
   alarm(0);
   return 0;
