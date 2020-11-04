@@ -32,7 +32,7 @@ int appRecetor(int fd){
     int fdfile, lido, psize;
     int counter=0, counter2;
     int move = 0; //offsets de 255
-    //int numDataPack = 1;
+    int numDataPack = 1;
 
     while(1){
         lido = llread(fd,pack); //lido = tamanho lido em pack
@@ -41,7 +41,7 @@ int appRecetor(int fd){
             printf("Erro na leitura em appRecetor()...\n");
 
         if (pack[0] == C_START){ //verifica se é pacote de controlo inicial
-            //printf("Pacote de controlo inicial: ");
+            printf("Pacote de controlo inicial: %d bytes lidos\n", lido);
             file_content(pack, lido); //guarda o conteudo em pack
 
             strcat(app.destination, app.file);
@@ -49,16 +49,17 @@ int appRecetor(int fd){
             continue;
         }
         else if (pack[0] == C_DATA && lido > 0) {//verifica se é pacote de dados
+            printf("Pacote de dados nº %d: %d bytes lidos\n", numDataPack, lido);
+
             psize = pack[3] + pack[2] * 256; //(K = 256 * L2 + L1)
 
             if (pack[1] != counter){
                 off_t offset = (pack[1] + move) * (MAX_SIZE-4);
                 lseek(fdfile, offset, SEEK_SET);
             }
-
-            //printf("Pacote de dados nº %d: ", numDataPack);
+            
             write(fdfile,&pack[4], psize); //escreve conteudo no ficheiro
-            //numDataPack++;
+            numDataPack++;
 
             if (pack[1] != counter){
                 lseek(fdfile, 0 , 4); // SEEK_HOLE
@@ -77,7 +78,7 @@ int appRecetor(int fd){
         }
 
         else if (pack[0] == C_END){
-            //printf("Pacote de controlo final: ");
+            printf("Pacote de controlo final: %d bytes lidos\n", lido);
             break;
         }
     }

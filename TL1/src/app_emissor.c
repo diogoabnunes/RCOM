@@ -24,10 +24,12 @@ int appEmissor(int fd) {
     cPack[fsize+4] = strlen(app.filename); //tamanho do ficheiro em octetos
     memcpy(&cPack[fsize+5],app.filename,strlen(app.filename)); //nome do ficheiro (pinguim)
 
-    if (llwrite(fd,cPack,fsize + 5 + strlen(app.filename))<0){ //envia o pacote de controlo para fd
+    int numControlPackBytes = llwrite(fd, cPack, fsize + 5 + strlen(app.filename));
+    if (numControlPackBytes<0){ //envia o pacote de controlo para fd
         printf("Erro ao escrever pacote de controlo inicial em appEmissor()...\n");
         return -1;
     }
+    else printf("Pacote de controlo inicial: %d bytes escritos\n", numControlPackBytes);
 
     int num = 0;
     char dPack[MAX_SIZE]; //pacote de dados
@@ -36,7 +38,6 @@ int appEmissor(int fd) {
     int numDataPack = 1;
 
     while((bytes_number = read(fdfile,file_data,MAX_SIZE-4)) != 0){   
-        printf("Pacote de dados nº %d: ", numDataPack); 
         // guarda conteudo em file_data
         // guarda numero de bytes em bytes_number
 
@@ -47,20 +48,26 @@ int appEmissor(int fd) {
         dPack[3] = bytes_number % 256; //L1 resto
         memcpy(&dPack[4],file_data,bytes_number); //dados
 
-        if (llwrite(fd,dPack,bytes_number+4) < 0){
+        int numDataPackBytes = llwrite(fd, dPack, bytes_number + 4);
+        if (numDataPackBytes < 0){
             //escreve os dados para fd
             printf("Erro ao escrever pacote de dados em appEmissor()...\n");
             return -1;
         }
+        else printf("Pacote de dados nº %d: %d bytes escritos\n", numDataPack, numDataPackBytes);
+
         num++;
         numDataPack++;
     }
     cPack[0] = C_END; //pacote de controlo final é igual ao inicial à excessão do parametro cPack[0]
 
-    if (llwrite(fd,cPack,fsize + 5 + strlen(app.filename)) < 0){
+    numControlPackBytes = llwrite(fd, cPack, fsize + 5 + strlen(app.filename));
+    if (numControlPackBytes < 0){
       //escreve o pacote de controlo final para fd
         printf("Erro ao escrever pacote de controlo final em appEmissor()...\n");
         return -1;
     }
+    else printf("Pacote de controlo final: %d bytes escritos\n", numControlPackBytes);
+
     return 0;
 }

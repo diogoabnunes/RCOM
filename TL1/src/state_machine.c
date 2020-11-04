@@ -116,7 +116,7 @@ int SM_A_RCV(unsigned char byte) {
 }
 
 int SM_C_RCV(unsigned char byte) {
-    if (byte == BCC(checkBuf[0], checkBuf[1])) {
+    if (byte == XOR(checkBuf[0], checkBuf[1])) {
         if (SM.type == READ && wrongC) {
             printf("Este pacote já tinha sido recebido\n");
             return -2;
@@ -185,7 +185,7 @@ int SM_BCC_OK(unsigned char byte, unsigned char **buf, int *size) {
         
             unsigned char BCC2 = (*buf)[0];
             for (int i = 1; i < *size; i++) {
-                BCC2 = BCC(BCC2, (*buf)[i]);
+                BCC2 = XOR(BCC2, (*buf)[i]);
             }
 
             if (destuffing == BCC2) {
@@ -197,7 +197,6 @@ int SM_BCC_OK(unsigned char byte, unsigned char **buf, int *size) {
                 return -1;
             }
         }
-        else return 1;
     }
     return 0;
 }

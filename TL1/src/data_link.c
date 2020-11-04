@@ -29,7 +29,7 @@ int llopen(char *port, int flag) {
 
 int llwrite(int fd, char *buffer, int length) {
   if (length > MAX_SIZE) {
-    printf("A mensagem é maior do que MAX_SIZE (%d)...\n", MAX_SIZE);
+    printf("O tamanho da mensagem (%d) é maior do que MAX_SIZE (%d)...\n", length, MAX_SIZE);
     return -1;
   }
 
@@ -38,7 +38,7 @@ int llwrite(int fd, char *buffer, int length) {
   initBuf[0] = FLAG;
   initBuf[1] = A_EmiRec;
   initBuf[2] = C_I(ll.sequenceNumber);
-  initBuf[3] = BCC(A_EmiRec, C_I(ll.sequenceNumber));
+  initBuf[3] = XOR(A_EmiRec, C_I(ll.sequenceNumber));
 
   // Fim de trama I
   unsigned char BCC2 = buffer[0];
@@ -102,7 +102,6 @@ int llwrite(int fd, char *buffer, int length) {
   
   ll.sequenceNumber = XOR(ll.sequenceNumber, 0x01);
 
-  printf("%ld bytes escritos\n", sizeof(allBuf));
   return sizeof(allBuf);
 }
 
@@ -121,7 +120,7 @@ int llread(int fd, unsigned char *buffer) {
   reply[0] = FLAG;
   reply[1] = A_EmiRec;
   reply[2] = cValue;
-  reply[3] = BCC(A_EmiRec, cValue);
+  reply[3] = XOR(A_EmiRec, cValue);
   reply[4] = FLAG;
 
   int res = write(fd, reply, 5);
@@ -134,7 +133,6 @@ int llread(int fd, unsigned char *buffer) {
     buffer[i] = dataBuf[i];
   }
   
-  printf("%d bytes lidos\n", size);
   return size;
 }
 

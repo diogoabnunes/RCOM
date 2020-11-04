@@ -151,7 +151,7 @@ int emissor_SET(int fd) {
   buf[0] = FLAG;
   buf[1] = A_EmiRec;
   buf[2] = C_SET;
-  buf[3] = BCC(A_EmiRec, C_SET);
+  buf[3] = XOR(A_EmiRec, C_SET);
   buf[4] = FLAG;
 
   settingUpSM(SV, START, A_RecEmi, C_UA);
@@ -239,7 +239,7 @@ int recetor_UA(int fd) {
   reply[0] = FLAG;
   reply[1] = A_RecEmi;
   reply[2] = C_UA;
-  reply[3] = BCC(A_RecEmi, C_UA);
+  reply[3] = XOR(A_RecEmi, C_UA);
   reply[4] = FLAG;
 
   res = write(fd, reply, SET_UA_DISC_SIZE);
@@ -261,7 +261,7 @@ int emissor_DISC(int fd) {
   msgDISC[0] = FLAG;
   msgDISC[1] = A_EmiRec;
   msgDISC[2] = C_DISC;
-  msgDISC[3] = BCC(A_EmiRec, C_DISC);
+  msgDISC[3] = XOR(A_EmiRec, C_DISC);
   msgDISC[4] = FLAG;
 
   settingUpSM(SV, START, A_RecEmi, C_DISC);
@@ -294,7 +294,7 @@ int emissor_DISC(int fd) {
         printf("Erro a receber a mensagem DISC do recetor...\n");
         if (num_try < ll.numTransmissions) printf("Nova tentativa...\n");
         else {
-          printf("Excedeu o númerode tentativas...\n");
+          printf("Excedeu o númerod e tentativas...\n");
           return -1;
         }
         break;
@@ -323,7 +323,7 @@ int emissor_DISC(int fd) {
   msgUA[0] = FLAG;
   msgUA[1] = A_EmiRec;
   msgUA[2] = C_UA;
-  msgUA[3] = BCC(A_EmiRec, C_UA);
+  msgUA[3] = XOR(A_EmiRec, C_UA);
   msgUA[4] = FLAG;
   
   res = write(fd, msgUA, SET_UA_DISC_SIZE);
@@ -366,7 +366,7 @@ int recetor_DISC(int fd) {
   reply[0] = FLAG;
   reply[1] = A_RecEmi;
   reply[2] = C_DISC;
-  reply[3] = BCC(A_RecEmi, C_DISC);
+  reply[3] = XOR(A_RecEmi, C_DISC);
   reply[4] = FLAG;
 
   res = write(fd, reply, SET_UA_DISC_SIZE);

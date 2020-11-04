@@ -19,7 +19,6 @@
 #define C_REJ(r) ((r == 1) ? 0b10000001 : 0b00000001) // 0x01 | 0x81
 #define C_I(r) ((r== 1) ? 0b00001000 : 0b00000000) // 0x00 | 0x40
 
-#define BCC(a,c) (a^c)
 #define XOR(a,b) (a^b)
 
 #define C_DATA 0x01

@@ -9,7 +9,7 @@
 #include "app.h"
 #include "defines.h"
 
-// Função que trata do envio dos pacotes de controlo e de dados para o recetor
+// Função que trata do envio dos pacotes de controlo e de dados para o recetor.
 int appEmissor(int fd);
 
 #endif // APP_EMISSOR_H
