@@ -1,7 +1,5 @@
 #include "data_link.h"
 
-static struct sigaction old; // Para usar no restauro do SIGALRM
-
 int llopen(char *port, int flag) {
   int fd;
 
@@ -12,14 +10,7 @@ int llopen(char *port, int flag) {
   }
 
   // Configuração do alarme
-  struct sigaction sa;
-  sigemptyset(&sa.sa_mask);
-  sa.sa_handler = atende;
-  sa.sa_flags = 0;
-  if (sigaction(SIGALRM, &sa, &old) < 0) {
-    printf("Erro no sigaction...\n");
-    return -1;
-  }
+  setting_alarm_handler();
 
   switch (flag) {
       case EMISSOR: {
@@ -148,7 +139,6 @@ int llread(int fd, unsigned char *buffer) {
 }
 
 int llclose(int fd) {
-  printf("\n");
   int ret = fd;
 
   switch (ll.type) {

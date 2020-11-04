@@ -1,6 +1,11 @@
 #ifndef DEFINES_H
 #define DEFINES_H
 
+#define BAUDRATE B9600
+#define TIMEOUT 3
+#define TRIES 3
+#define MAX_SIZE 1024
+
 #define EMISSOR 0
 #define RECETOR 1
 
@@ -23,14 +28,9 @@
 #define BCC(a,c) (a^c)
 #define XOR(a,b) (a^b)
 
-#define BAUDRATE B9600
-#define TIMEOUT 3
-#define TRIES 3
-#define MAX_SIZE 1024
-
-#define DATA 0x01
+#define C_DATA 0x01
 #define C_START 0x02
-#define END 0x03
+#define C_END 0x03
 #define T_SIZE 0x00
 #define T_NAME 0x01
 

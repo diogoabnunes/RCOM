@@ -1,5 +1,7 @@
 #include "utils.h"
 
+static struct sigaction old; // Para usar no restauro do SIGALRM
+
 void print_0x(unsigned char a) {
   if (a == 0) printf("0x00 ");
   else        printf("%#.2x " , a);
@@ -11,6 +13,18 @@ void atende() {
     printf("Alarm!\n");
     return;
   }
+}
+
+int setting_alarm_handler() {
+  struct sigaction sa;
+  sigemptyset(&sa.sa_mask);
+  sa.sa_handler = atende;
+  sa.sa_flags = 0;
+  if (sigaction(SIGALRM, &sa, &old) < 0) {
+    printf("Erro no sigaction...\n");
+    return -1;
+  }
+  return 0;
 }
 
 int llinit(int *fd, char *port) {
@@ -62,8 +76,8 @@ int ciclo_write(int fd, unsigned char *buf, int bufsize) {
     try++;
     int res = write(fd, buf, bufsize);
     if (res == -1) {
-      printf("ll_write(): Erro a enviar Trama I\n");
-      return 1;
+      printf("Erro a enviar Trama I para o buffer no ciclo_write()...\n");
+      return -1;
     }
 
     alarm(ll.timeout);
@@ -75,22 +89,22 @@ int ciclo_write(int fd, unsigned char *buf, int bufsize) {
       res = read(fd, readBuf, 1);
 
       if (res == -1 && errno == EINTR) {
-        printf("Erro a receber RR do recetor...\n");
-        if (try < ll.numTransmissions) {
-          printf("Nova tentativa...\n");
-        }
+        printf("Erro a receber RR do recetor no ciclo_write()...\n");
+        if (try < ll.numTransmissions) printf("Nova tentativa...\n");
         else {  
-          printf("Excedeu numero de tentativas\n");
+          printf("Excedeu o número de tentativas...\n");
           return -1;
         }
+        break;
       }
       else if (res == -1) {
-          printf("Erro a receber RR do buffer\n");
+          printf("Erro a receber RR do buffer no ciclo_write()...\n");
           return -1;
       }
 
       if (stateMachine(readBuf[0], NULL, NULL) < 0) {
-        printf("Erro a receber RR ou REJ...\n");
+        printf("Erro a receber RR ou REJ no ciclo_write()...\n");
+        fail = TRUE;
         alarm(0);
         break;
       }
@@ -110,20 +124,20 @@ int ciclo_read(int fd, unsigned char *C, unsigned char **dataBuf, int *size) {
   while (STOP == FALSE) {
     int res = read(fd, buf, 1);
     if (res == -1) {
-      printf("Erro a receber trama I...\n");
+      printf("Erro a receber trama I do buffer no ciclo_read()...\n");
       return -1;
     }
 
     int smRead = stateMachine(buf[0], dataBuf, size);
     if (smRead == -1) {
       *C = C_REJ(ll.sequenceNumber);
-      printf("Erro no BCC...\n");
+      printf("Erro no BCC... no ciclo_read()...\n");
       return -1;
     }
     else if (smRead == -2) {
       *C = C_RR(ll.sequenceNumber);
-      printf("Número de sequência errado em no byte C...\n");
-      break;
+      printf("Número de sequência errado em C no ciclo_read()...\n");
+      return -2;
     }
     *C = C_RR(ll.sequenceNumber);
 
@@ -149,7 +163,7 @@ int emissor_SET(int fd) {
     num_try++;
     res = write(fd, buf, SET_UA_SIZE);
     if (res == -1) {
-      printf("Erro no envio de mensagem SET\n");
+      printf("Erro no envio de mensagem SET...\n");
       return 1;
     }
     else {
@@ -169,6 +183,11 @@ int emissor_SET(int fd) {
       if (res == -1 && errno == EINTR) {
         printf("Erro a receber a mensagem UA do recetor...\n");
         if (num_try < ll.numTransmissions) printf("Nova tentativa...\n");
+        else {
+          printf("Excedeu o número de tentativas...");
+          return -1;
+        }
+        break;
       }
       else if (res == -1) {
         printf("Erro a receber a mensagem UA do buffer...\n");
@@ -274,6 +293,11 @@ int emissor_DISC(int fd) {
       if (res == -1 && errno == EINTR) {
         printf("Erro a receber a mensagem DISC do recetor...\n");
         if (num_try < ll.numTransmissions) printf("Nova tentativa...\n");
+        else {
+          printf("Excedeu o númerode tentativas...\n");
+          return -1;
+        }
+        break;
       }
       else if (res == -1) { 
         printf("Erro a receber a mensagem DISC no número de tentativas permitidas...\n");

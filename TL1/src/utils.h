@@ -9,6 +9,9 @@ void print_0x(unsigned char a);
 // Função do alarm handler.
 void atende();
 
+// Função que configura o alarm handler.
+int setting_alarm_handler();
+
 // Inicialização da conexão.
 int llinit(int *fd, char *port);
 
