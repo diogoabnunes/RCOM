@@ -293,6 +293,7 @@ int emissor_DISC(int fd) {
 
   do {
     num_try++;
+    // tcflush(fd, TCIFLUSH);
     res = write(fd, msgDISC, SET_UA_DISC_SIZE);
     if (res == -1) {
       printf("Erro no envio de mensagem DISC\n");
@@ -316,21 +317,22 @@ int emissor_DISC(int fd) {
         printf("Erro a receber a mensagem DISC do recetor...\n");
         if (num_try < ll.numTransmissions) printf("Nova tentativa...\n");
         else {
-          printf("Excedeu o númerod e tentativas...\n");
+          printf("Excedeu o número de tentativas...\n");
           return -1;
         }
         break;
       }
       else if (res == -1) { 
-        printf("Erro a receber a mensagem DISC no número de tentativas permitidas...\n");
+        printf("Erro a receber a mensagem DISC do buffer...\n");
         return -1;
       }
       print_0x(readBuf[0]);
 
-      stateMachine(readBuf[0], NULL, NULL); // **buf and *size not needed here
+      stateMachine(readBuf[0], NULL, NULL);
 
       if (SM.state == SM_STOP || fail) STOP = TRUE;
     }
+    // tcflush(fd, TCIOFLUSH);
   } while (num_try < ll.numTransmissions && fail);
   printf("\n");
 
@@ -343,9 +345,9 @@ int emissor_DISC(int fd) {
 
   unsigned char msgUA[SET_UA_DISC_SIZE];
   msgUA[0] = FLAG;
-  msgUA[1] = A_EmiRec;
+  msgUA[1] = A_RecEmi;
   msgUA[2] = C_UA;
-  msgUA[3] = XOR(A_EmiRec, C_UA);
+  msgUA[3] = XOR(A_RecEmi, C_UA);
   msgUA[4] = FLAG;
   
   res = write(fd, msgUA, SET_UA_DISC_SIZE);
@@ -402,9 +404,10 @@ int recetor_DISC(int fd) {
     printf("\n");
   }
 
-  settingUpSM(SV, START, A_EmiRec, C_UA);
+  settingUpSM(SV, START, A_RecEmi, C_UA);
   STOP = FALSE;
   unsigned char readMsgUA[1];
+  alarm(ll.timeout);
 
   printf("Mensagem UA recebida: ");
   while (STOP==FALSE) {
@@ -419,8 +422,9 @@ int recetor_DISC(int fd) {
 
     if (SM.state == SM_STOP) STOP = TRUE;
   }
-  alarm(0);
   printf("\n\n");
+
+  alarm(0);
 
   return fd;
 }
