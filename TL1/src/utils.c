@@ -293,7 +293,6 @@ int emissor_DISC(int fd) {
 
   do {
     num_try++;
-    // tcflush(fd, TCIFLUSH);
     res = write(fd, msgDISC, SET_UA_DISC_SIZE);
     if (res == -1) {
       printf("Erro no envio de mensagem DISC\n");
@@ -332,7 +331,6 @@ int emissor_DISC(int fd) {
 
       if (SM.state == SM_STOP || fail) STOP = TRUE;
     }
-    // tcflush(fd, TCIOFLUSH);
   } while (num_try < ll.numTransmissions && fail);
   printf("\n");
 
@@ -349,6 +347,8 @@ int emissor_DISC(int fd) {
   msgUA[2] = C_UA;
   msgUA[3] = XOR(A_RecEmi, C_UA);
   msgUA[4] = FLAG;
+
+  sleep(1);
   
   res = write(fd, msgUA, SET_UA_DISC_SIZE);
   if (res == -1) {
