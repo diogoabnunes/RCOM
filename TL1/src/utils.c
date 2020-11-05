@@ -347,8 +347,6 @@ int emissor_DISC(int fd) {
   msgUA[2] = C_UA;
   msgUA[3] = XOR(A_RecEmi, C_UA);
   msgUA[4] = FLAG;
-
-  sleep(1);
   
   res = write(fd, msgUA, SET_UA_DISC_SIZE);
   if (res == -1) {
@@ -360,6 +358,8 @@ int emissor_DISC(int fd) {
     for (int i = 0; i < SET_UA_DISC_SIZE; i++) print_0x(msgUA[i]);
     printf("\n\n");
   }
+
+  sleep(3);
 
   return fd;
 }
@@ -411,20 +411,22 @@ int recetor_DISC(int fd) {
 
   printf("Mensagem UA recebida: ");
   while (STOP==FALSE) {
-    res = read(fd, readMsgUA, 1);
+    res = read(fd, readBuf, 1);
     if (res == -1) {
       printf("Erro a receber mensagem UA\n");
       return -1;
     }
-    print_0x(readMsgUA[0]);
+    print_0x(readBuf[0]);
 
-    stateMachine(readMsgUA[0], NULL, NULL);
+    stateMachine(readBuf[0], NULL, NULL);
 
     if (SM.state == SM_STOP) STOP = TRUE;
   }
   printf("\n\n");
 
   alarm(0);
+
+  sleep(3);
 
   return fd;
 }
