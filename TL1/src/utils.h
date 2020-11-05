@@ -3,6 +3,9 @@
 
 #include "data_link.h"
 
+// Função auxiliar para imprimir a velocidade de transmissão.
+int baudrate_number(int b);
+
 // Função para imprimir um valor em hexadecimal.
 void print_0x(unsigned char a);
 

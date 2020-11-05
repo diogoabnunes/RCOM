@@ -102,6 +102,9 @@ int llwrite(int fd, char *buffer, int length) {
   
   ll.sequenceNumber = XOR(ll.sequenceNumber, 0x01);
 
+  free(dataBuf);
+  free(endBuf);
+
   return sizeof(allBuf);
 }
 

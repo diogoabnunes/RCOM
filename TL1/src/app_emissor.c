@@ -1,6 +1,24 @@
 #include "app_emissor.h"
 
+void startClock() {
+    clock_gettime(CLOCK_MONOTONIC, &start);
+}
+
+void currentClock_BperSecond(int bytes) {
+    clock_gettime(CLOCK_MONOTONIC, &current);
+    double time = (current.tv_sec - start.tv_sec)*1000 + (current.tv_nsec - start.tv_nsec)/10e6;
+    double bits = bytes / (time / 1000);
+
+    printf("\nVelocidade de transmissão: %d\n", baudrate_number(ll.baudRate));
+    printf("Tamanho dos pacotes de informação: %d\n", MAX_SIZE);
+    printf("Número de bytes: %d\n", bytes);
+    printf("Tempo: %f ms\n", time);
+    printf("Bits por segundo: %f\n", bits);
+}
+
 int appEmissor(int fd) {
+    startClock();
+
     struct stat ficheiro; //stat ficheiro do pinguim
     if (stat(app.filename, &ficheiro)<0){
         printf("Erro no stat em appEmissor()...\n");
@@ -68,6 +86,8 @@ int appEmissor(int fd) {
         return -1;
     }
     else printf("Pacote de controlo final: %d bytes escritos\n", numControlPackBytes);
+
+    currentClock_BperSecond(ficheiro.st_size);
 
     return 0;
 }

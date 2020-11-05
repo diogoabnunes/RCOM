@@ -1,0 +1,10 @@
+Alterando Tamanho dos pacotes de informação: -> FAZER NOS PCS DA FEUP
+64, 128, 256, 512, 1024, 2048, 4096
+
+(copiar 5 linhas do resultado q aparece no emissor)
+
+--------------------------------------------------
+Alterando Velocidade de transmissão: -> FAZER NOS PCS DA FEUP
+38400, 9600, 2400, 1200, 300, 50, 0
+
+(copiar 5 linhas do resultado q aparece no emissor)

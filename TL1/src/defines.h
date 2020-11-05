@@ -1,7 +1,7 @@
 #ifndef DEFINES_H
 #define DEFINES_H
 
-#define BAUDRATE B9600
+#define BAUDRATE B38400
 #define TIMEOUT 3
 #define TRIES 3
 #define MAX_SIZE 1024
