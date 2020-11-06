@@ -10,6 +10,14 @@
 #include "defines.h"
 #include "eficiency.h"
 
+struct stat ficheiro; //stat ficheiro do pinguim
+
+// Função que trata do envio do pacote de controlo inicial.
+int startControlPacket(int fd);
+
+//Função que trata do envio do pacote de controlo final.
+int endControlPacket(int fd);
+
 // Função que trata do envio dos pacotes de controlo e de dados para o recetor.
 int appEmissor(int fd);
 

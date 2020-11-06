@@ -3,7 +3,7 @@
 gnome-terminal --window-with-profile=RCOM -- sudo ./src/cable
 
 echo "Sleeping for 10sec waiting for sudo password...";
-sleep 10
+sleep 5
 
 cd src
 make -s
