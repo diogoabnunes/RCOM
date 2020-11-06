@@ -8,6 +8,7 @@
 
 #include "app.h"
 #include "defines.h"
+#include "eficiency.h"
 
 // 
 void file_content(unsigned char *pack, int psize);

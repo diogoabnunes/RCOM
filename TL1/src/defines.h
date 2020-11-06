@@ -6,6 +6,10 @@
 #define TRIES 3
 #define MAX_SIZE 1024
 
+#define BCC1_PROB_ERROR 0
+#define BCC2_PROB_ERROR 0
+#define DELAY_T_PROP 0
+
 #define SET_UA_DISC_SIZE 5
 
 #define FLAG 0x7E

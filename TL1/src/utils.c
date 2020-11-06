@@ -2,28 +2,6 @@
 
 static struct sigaction old; // Para usar no restauro do SIGALRM
 
-int baudrate_number(int b) {
-    switch(b) {
-        case B0: return 0;
-        case B50: return 50;
-        case B75: return 75;
-        case B110: return 110;
-        case B134: return 134;
-        case B150: return 150;
-        case B200: return 200;
-        case B300: return 300;
-        case B600: return 600;
-        case B1200: return 1200;
-        case B1800: return 1800;
-        case B2400: return 2400;
-        case B4800: return 4800;
-        case B9600: return 9600;
-        case B19200: return 19200;
-        case B38400: return 38400;
-        default: return -1;
-    }
-}
-
 void print_0x(unsigned char a) {
   if (a == 0) printf("0x00 ");
   else        printf("%#.2x " , a);
@@ -406,7 +384,6 @@ int recetor_DISC(int fd) {
 
   settingUpSM(SV, START, A_RecEmi, C_UA);
   STOP = FALSE;
-  unsigned char readMsgUA[1];
   alarm(ll.timeout);
 
   printf("Mensagem UA recebida: ");

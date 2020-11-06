@@ -116,6 +116,10 @@ int SM_A_RCV(unsigned char byte) {
 }
 
 int SM_C_RCV(unsigned char byte) {
+
+    // Eficiência do protocolo: variar FER -> gerar erros aleatórios nas tramas de informação
+    if (BCC1_PROB_ERROR != 0 && SM.type == READ) random_error_BCC1(checkBuf);
+
     if (byte == XOR(checkBuf[0], checkBuf[1])) {
         if (SM.type == READ && wrongC) {
             printf("Este pacote já tinha sido recebido\n");
@@ -160,6 +164,13 @@ int SM_BCC_OK(unsigned char byte, unsigned char **buf, int *size) {
     else {
         frameIndex++;
         if (byte == FLAG) {
+
+            // Eficiência do protocolo: variar FER -> gerar erros aleatórios nas tramas de informação
+            if (BCC2_PROB_ERROR != 0) random_error_BCC2(ll.frame, frameIndex);
+
+            // Eficiência do protocolo: variar T_PROP
+            sleep(DELAY_T_PROP);
+
             // De-Stuffing
             *buf = (unsigned char *)malloc(frameIndex-4-2);
             *size = 0;
