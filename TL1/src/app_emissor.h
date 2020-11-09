@@ -8,7 +8,7 @@
 
 #include "app.h"
 #include "defines.h"
-#include "eficiency.h"
+#include "efficiency.h"
 
 struct stat ficheiro; //stat ficheiro do pinguim
 

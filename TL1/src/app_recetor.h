@@ -8,7 +8,7 @@
 
 #include "app.h"
 #include "defines.h"
-#include "eficiency.h"
+#include "efficiency.h"
 
 // Função que guarda o conteúdo do pacote de dados recebido no ficheiro (app.file).
 void file_content(unsigned char *pack, int psize);

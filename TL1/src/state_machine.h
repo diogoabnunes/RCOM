@@ -2,7 +2,7 @@
 #define STATE_MACHINE_H
 
 #include "data_link.h"
-#include "eficiency.h"
+#include "efficiency.h"
 
 enum stateMachineType {
     SV,     // Supervisão
