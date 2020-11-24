@@ -1,0 +1,129 @@
+Protocolos de Aplicação IETF
+
+Para executar os passos deste guião deverá primeiro fazer login numa máquina de FEUP e autenticar-se com as suas credenciais.  Por exemplo, faça:
+
+ssh your-user-name-na-feup@tom.fe.up.pt
+
+
+
+- Verifique no seu sistema Unix quais são as portas em que respondem os servidores de TELNET (23), SMTP (25), POP3 (110) e FTP (21).
+--- observe o ficheiro /etc/services
+
+
+
+EXPERIÊNCIA DE SMTP (envio de mail)
+
+- Abra uma ligação ao servidor de SMTP e envie um mail.
+  ">", linha de comando a introduzir pelo aluno, que se comporta como um cliente de SMTP (alterar os endereços de mail conforme apropriado).
+  "<", resposta do servidor (ou semelhante).
+Os caracteres ">" / "<" não são enviados/recebidos.
+
+> telnet smtp.fe.up.pt 25
+< 220 smtp.fe.up.pt ESMTP Sendmail ...
+> helo fe.up.pt
+< 250 smtp.fe.up.pt Hello quarteira.fe.up.pt
+[192.168.103.126], pleased to meet you
+> mail from: josedasilva@fe.up.pt
+< 250 2.1.0 josedasilva @fe.up.pt... Sender ok
+> rcpt to: euproprio@fe.up.pt
+< 250 2.1.5 euproprio@fe.up.pt... Recipient ok
+> data
+< 354 Enter mail, end with "." on a line by itself
+> ola.
+> .
+< 250 2.0.0 fAMKLfE18191 Message accepted for delivery
+> quit
+< 221 2.0.0 lorosae.fe.up.pt closing connection
+
+- Usando o seu cliente de mail, verifique se o mail foi armazenado na sua mailbox.
+
+
+
+
+EXPERIÊNCIA DE POP3 (receção de mail)
+
+- Abra uma ligação TCP ao servidor de POP3 do sistema maila.fe.up.pt. Verifique quantas mensagens tem e importe-as.
+
+> telnet maila.fe.up.pt 110
+< +OK PO3 maila.fe.up.pt  server ready
+> user euproprio
+< +OK Password required for euproprio.
+> pass _cuidado_que_fica_visível_
+< +OK euproprio has 2 visible messages (0 hidden) in 17498 octets.
+> stat
+< +OK 2 17498
+> retr 1
+< +OK 889 octets
+< ...
+< .
+> retr 2
+< ...
+< .
+> quit
+
+
+
+EXPERIÊNCIA DE FTP (transferência de ficheiro)
+
+O FTP usa uma ligação TCP para controlo e, para cada ficheiro a transferir, abre uma nova ligação TCP.
+Serão necessárias duas janelas (janela_A e janela_B) para efectuar esta experiência.
+
+Na janela_A, fazemos
+> telnet  ftp.up.pt 21
+> user anonymous
+< 331 Password required for euproprio.
+> pass qualquer-password
+< 230 User anonymouslogged in.
+> pasv
+< 227 Entering Passive Mode (193,136,28,12,19,91)
+
+Com o comando "pasv", pede-se ao servidor de FTP para transferir dados em modo passivo.
+Nesta situação, o cliente ficara responsável pela abertura da ligação TCP para os dados.
+
+Na resposta, o servidor envia 6 bytes (exemplo: 193,136,28,12,19,91) com o seguinte significado:
+- 193,136,28,12 endereço IP do servidor,
+- 19,91 porta em que o servidor se encontra à espera de ligação.
+A interpretação destes dois bytes deverá ser feita daseguinte forma:
+porta = 19*256 + 91 = 4955
+
+Na janela_B, faça então
+> telnet ftp.up.pt 4955
+< ...
+
+Na janela_A, de novo
+> retr ficheiro
+
+E observe o ficheiro recebido na janela_B. Cada janela funciona como a extremidade de uma ligação.
+
+
+
+
+EXPERIÊNCIA DE HTTP (transferência de página HTML)
+
+- Ligue-se ao servidor de www da FEUP.
+Nos comandos que se seguem, não se esqueça de incluir uma linha em branco a seguir 
+    ao comando "HOST: www.fe.up.pt" (2 "returns").
+
+> telnet www.fe.up.pt 80
+> GET / HTTP/1.1
+> HOST: www.fe.up.pt
+>
+< HTTP/1.1 200 OK
+< Date: Wed, 06 Nov 2019 19:16:19 GMT
+< Server: Apache/2.4.25 (Debian) OpenSSL/1.0.2t
+< Last-Modified: Sun, 27 Dec 2015 10:32:42 GMT
+< ETag: "13c-527deb55ae63a"
+< Accept-Ranges: bytes
+< Content-Length: 316
+< Vary: Accept-Encoding
+< X-Clacks-Overhead: GNU Terry Pratchett
+< Content-Type: text/html
+<
+<    <html>
+<    <head>
+<        ...
+<    </head>
+<    <body>
+<          ...
+<    </body>
+<    </html>

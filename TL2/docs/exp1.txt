@@ -1,0 +1,30 @@
+Exp 1 - Bancada 4, sala pequena
+
+Utils:
+- Mudar de PC: carregar (com força) no botão com o número do PC para mudar na bancada.
+
+- updateimage (terminal) para repor configurações dos PCs 3 e 4 (repetir para os 2 PCs);
+- enable (num só PC num terminal Sdkterm)
+  password: 8nortel
+
+- PC3: ifconfig eth0 172.16.40.1/24
+- PC4: ifconfig eth0 172.16.40.254/24
+
+Para confirmar que tudo ficou bem configurado (basta confirmar 1 destes) e que os 2 PCs comunicam pela mesma rede:
+- no PC3: ping 172.16.40.254
+- no PC4: ping 172.16.40.1
+Resultado esperado:
+64 bytes from 172.16.40."": icmp_seq=i ttl=64 time="" ms
+...
+
+DNS: traduz nome -> IP
+FEUP tem 2:
+-193.136.28.10
+- 193.136.28.9
+
+ARP: traduz IP -> MAC
+
+MAC Address: 6 octetos: 3 OUT e 3 NIC (identificadores)
+IP Address: 32 bit (IPv4)
+192.168.0.0/24
+192.168.0.1 - 192.168.0.254
