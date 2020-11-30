@@ -24,7 +24,7 @@ int parseArgs(struct args *URL, char *command) {
                 else if (command[i] == protocol_expected[i] && i == 5) { 
                     strcpy(URL->protocol, "ftp"); 
                     state = USER; index = 0; }
-                else { printf("Error parsing protocol. Expected: ftp\n"); return 1; }
+                else { printf("Error parsing protocol. Expected: ftp://\n"); return 1; }
                 break;
 
             case USER: 
@@ -71,5 +71,15 @@ int parseArgs(struct args *URL, char *command) {
         else { URL->filename[index] = URL->path[i]; index++; }
     }
     
+    return 0;
+}
+
+int getIPAddress(char *ip, char host[]) {
+    struct hostent *h;
+    if ((h = gethostbyname(host)) == NULL) {  
+        herror("gethostbyname");
+        return 1;
+    }
+    strcpy(ip, inet_ntoa(*((struct in_addr *)h->h_addr)));
     return 0;
 }
