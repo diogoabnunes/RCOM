@@ -34,4 +34,10 @@ int parseArgs(struct args *URL, char *command);
 
 int getIPAddress(char *ip, char host[]);
 
+int createConnectSocketServer(char *IP, int port);
+
+int receiveConfirmationFromServer();
+
+int login(struct ftp *FTP, char *user, char *password);
+
 #endif // UTILS_H

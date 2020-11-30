@@ -5,9 +5,6 @@ void clearVar(char *var) {
 }
 
 int parseArgs(struct args *URL, char *command) {
-    
-    // ftp://[<user>:<password>@]<host>/<url-path>
-    // ex.: ftp://diogo:porto@ftp.up.pt/folder/folder2/file.txt
 
     char protocol_expected[6] = "ftp://";
     enum state {PROTOCOL, USER, PASSWORD, HOST, PATH};
@@ -81,5 +78,44 @@ int getIPAddress(char *ip, char host[]) {
         return 1;
     }
     strcpy(ip, inet_ntoa(*((struct in_addr *)h->h_addr)));
+    return 0;
+}
+
+int createConnectSocketServer(char *IP, int port) {
+    int	sockfd;
+	struct sockaddr_in server_addr;
+	
+	// Server Address Handling
+	bzero((char*)&server_addr,sizeof(server_addr));
+	server_addr.sin_family = AF_INET;
+	server_addr.sin_addr.s_addr = inet_addr(IP);	// 32 bit Internet address network byte ordered*/
+	server_addr.sin_port = htons(port);		        // server TCP port must be network byte ordered */
+    
+	// Open an TCP socket
+	if ((sockfd = socket(AF_INET,SOCK_STREAM,0)) < 0) {
+        perror("socket()");
+        exit(0);
+    }
+
+	// Connect to the server
+    if (connect(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
+        perror("connect()");
+        return 1;
+	}
+
+    return sockfd;
+}
+
+int receiveConfirmationFromServer() {
+    printf("TO DO\n");
+    return 0;
+}
+
+// sendToSocket
+// receiveFromSocket
+// sendCommandAndReply
+
+int login(struct ftp *FTP, char *user, char *password) {
+    printf("TO DO\n");
     return 0;
 }
