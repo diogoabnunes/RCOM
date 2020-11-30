@@ -1,8 +1,5 @@
 #include "utils.h"
 
-// ftp://[<user>:<password>@]<host>/<url-path>
-// ex.: ftp://diogo:porto@ftp.up.pt/folder/folder2/file.txt
-
 int main(int argc, char *argv[]) {
     printf("RCOM TL2\n\n");
 
