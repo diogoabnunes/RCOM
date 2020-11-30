@@ -20,7 +20,7 @@ int main(int argc, char *argv[]) {
     if (getIPAddress(URL.IP, URL.host) != 0) return 1;
     printf("IP Address : %s\n", URL.IP);
     
-
+    
     
     /*
     printf("TO DO: createConnectSocketServer(...);\n");
