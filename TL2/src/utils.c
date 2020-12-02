@@ -68,7 +68,6 @@ int openConnectSocketServer(char *IP, int port) {
         return -2;
 	}
 
-    printf("Connection estabilished in port %d.\n", port);
     return sockfd;
 }
 
@@ -115,6 +114,17 @@ char* receivingPasvCommand(FILE* sockfile, char* serverIP, int *serverPort) {
     return buf;
 }
 
-int downloadFile() {
+int downloadFile(int sockfd, char *filename) {
+    
+    int file_fd = open(filename, O_WRONLY | O_CREAT, 0777);
+    if (file_fd < 0) { printf("Error creating file.\n"); return 1; }
+
+    int bytes; char buf[1];
+    do {
+        bytes = read(sockfd, buf, 1);
+        //printf("%s", buf);
+        write(file_fd, buf, bytes);
+    } while (bytes != 0);
+
     return 0;
 }

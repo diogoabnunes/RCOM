@@ -5,13 +5,14 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <errno.h> 
 #include <netdb.h> 
 #include <sys/types.h>
 #include <netinet/in.h> 
 #include <arpa/inet.h>
 
-#define MAX 256
+#define MAX 100
 #define FTP_PORT 21
 
 struct args {
@@ -26,7 +27,8 @@ struct args {
 
 struct ftp {
     FILE *file;
-    int file_fd;
+    int fd;
+    FILE *data_file;
     int data_fd;
 };
 
@@ -46,6 +48,6 @@ char* receiving(FILE * sockfile);
 
 char* receivingPasvCommand(FILE* sockfile, char* serverIP, int *serverPort);
 
-int downloadFile();
+int downloadFile(int sockfd, char *filename);
 
 #endif // UTILS_H
