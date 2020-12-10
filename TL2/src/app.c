@@ -31,19 +31,19 @@ int main(int argc, char *argv[]) {
 
 	// Sending username
 	char userCommand[MAX];
-	sprintf(userCommand, "user %s\n", URL.user);
+	sprintf(userCommand, "user %s\r\n", URL.user);
 	sending(ftp.fd, userCommand);
 	receiving(ftp.file); // 331 Please specify the password.
 
 	// Sending password
 	char passwordCommand[MAX];
-	sprintf(passwordCommand, "pass %s\n", URL.password);
+	sprintf(passwordCommand, "pass %s\r\n", URL.password);
 	sending(ftp.fd, passwordCommand);
 	receiving(ftp.file); // 230 Login successful.
 
 	// Sending pasv
 	char pasvCommand[MAX], ip[16]; int port;
-	sprintf(pasvCommand, "pasv\n");
+	sprintf(pasvCommand, "pasv\r\n");
 	sending(ftp.fd, pasvCommand);
 	receivingPasvCommand(ftp.file, ip, &port); // 227 Entering Passive Mode (193,137,29,15,port1,port2). -> port = port1 * 256 + port2
 	if (strcmp(ip, URL.IP) != 0) {printf("Error parsing pasv.\n"); return 5; }
@@ -55,7 +55,7 @@ int main(int argc, char *argv[]) {
     //else printf("Connection estabilished in port %d.\n", port);
 
 	char retrCommand[MAX];
-	sprintf(retrCommand, "retr %s\n", URL.path);
+	sprintf(retrCommand, "retr %s\r\n", URL.path);
 	sending(ftp.fd, retrCommand);
 	receiving(ftp.file); // 150 Opening BINARY mode data connection for pub/apache/HEADER.html (770 bytes).
 
