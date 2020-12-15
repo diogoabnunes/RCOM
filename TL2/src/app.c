@@ -13,9 +13,9 @@ int main(int argc, char *argv[]) {
 	/*printf("Protocol: %s\n", URL.protocol);
 	printf("User: %s\n", URL.user);
 	printf("Password: %s\n", URL.password);
-	printf("Host: %s\n", URL.host);
+	printf("Host: %s\n", URL.host);*/
 	printf("Path: %s\n", URL.path);
-	printf("Filename: %s\n\n", URL.filename);*/
+	printf("Filename: %s\n\n", URL.filename);
 
 	if (getIPAddress(URL.IP, URL.host) != 0) { printf("Error getting IP address.\n"); return 2; }
 	/*printf("IP Address : %s\n\n", URL.IP);*/

@@ -26,11 +26,11 @@ int parseArgs(struct args *URL, char *command) {
 }
 
 int parseFilename(struct args *URL) {
-    char fullpath[256];
+  char fullpath[256];
   strcpy(fullpath, URL->path);
   char* token = strtok(fullpath, "/");
   while( token != NULL ) {
-    URL->filename = token;
+    strcpy(URL->filename, token);
     token = strtok(NULL, "/");
   }
   return 0;
