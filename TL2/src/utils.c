@@ -85,7 +85,6 @@ char* receiving(FILE * sockfile) {
     char *buf;
 	size_t bytes = 0;
 
-	// Sending username
 	while (1) {
 		getline(&buf, &bytes, sockfile);
 		printf("%s", buf);
@@ -125,6 +124,8 @@ int downloadFile(int sockfd, char *filename) {
         //printf("%s", buf);
         write(file_fd, buf, bytes);
     } while (bytes != 0);
+
+    close(file_fd);
 
     return 0;
 }

@@ -13,9 +13,9 @@ int main(int argc, char *argv[]) {
 	/*printf("Protocol: %s\n", URL.protocol);
 	printf("User: %s\n", URL.user);
 	printf("Password: %s\n", URL.password);
-	printf("Host: %s\n", URL.host);*/
+	printf("Host: %s\n", URL.host);
 	printf("Path: %s\n", URL.path);
-	printf("Filename: %s\n\n", URL.filename);
+	printf("Filename: %s\n\n", URL.filename);*/
 
 	if (getIPAddress(URL.IP, URL.host) != 0) { printf("Error getting IP address.\n"); return 2; }
 	/*printf("IP Address : %s\n\n", URL.IP);*/
@@ -29,19 +29,19 @@ int main(int argc, char *argv[]) {
 	ftp.file = fdopen(ftp.fd, "r");
 	receiving(ftp.file);
 
-	// Sending username
+	// username
 	char userCommand[MAX];
 	sprintf(userCommand, "user %s\r\n", URL.user);
 	sending(ftp.fd, userCommand);
 	receiving(ftp.file); // 331 Please specify the password.
 
-	// Sending password
+	// password
 	char passwordCommand[MAX];
 	sprintf(passwordCommand, "pass %s\r\n", URL.password);
 	sending(ftp.fd, passwordCommand);
 	receiving(ftp.file); // 230 Login successful.
 
-	// Sending pasv
+	// pasv
 	char pasvCommand[MAX], ip[16]; int port;
 	sprintf(pasvCommand, "pasv\r\n");
 	sending(ftp.fd, pasvCommand);
@@ -54,14 +54,19 @@ int main(int argc, char *argv[]) {
 	if (ftp.data_fd == -2) { printf("Error connecting to the server.\n"); return 4; }
     //else printf("Connection estabilished in port %d.\n", port);
 
+	// retr
 	char retrCommand[MAX];
 	sprintf(retrCommand, "retr %s\r\n", URL.path);
 	sending(ftp.fd, retrCommand);
 	receiving(ftp.file); // 150 Opening BINARY mode data connection for pub/apache/HEADER.html (770 bytes).
 
+	// Download file
 	if (downloadFile(ftp.data_fd, URL.filename) != 0) { printf("Error transfering file.\n"); return 5; }
-
 	receiving(ftp.file); // 226 Transfer complete.
+
+	// quit
+	sending(ftp.fd, "quit\r\n");
+	receiving(ftp.file); // 221 Goodbye.
 
 	return 0;
 }
