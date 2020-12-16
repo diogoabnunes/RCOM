@@ -10,12 +10,12 @@ int main(int argc, char *argv[]) {
 
 	struct args URL;
 	if (parseArgs(&URL, argv[1]) != 0) { printf("Error parsing arguments.\n"); return 1; }
-	/*printf("Protocol: %s\n", URL.protocol);
+	printf("Protocol: %s\n", URL.protocol);
 	printf("User: %s\n", URL.user);
 	printf("Password: %s\n", URL.password);
 	printf("Host: %s\n", URL.host);
 	printf("Path: %s\n", URL.path);
-	printf("Filename: %s\n\n", URL.filename);*/
+	printf("Filename: %s\n\n", URL.filename);
 
 	if (getIPAddress(URL.IP, URL.host) != 0) { printf("Error getting IP address.\n"); return 2; }
 	/*printf("IP Address : %s\n\n", URL.IP);*/
@@ -63,10 +63,6 @@ int main(int argc, char *argv[]) {
 	// Download file
 	if (downloadFile(ftp.data_fd, URL.filename) != 0) { printf("Error transfering file.\n"); return 5; }
 	receiving(ftp.file); // 226 Transfer complete.
-
-	// quit
-	sending(ftp.fd, "quit\r\n");
-	receiving(ftp.file); // 221 Goodbye.
 
 	return 0;
 }

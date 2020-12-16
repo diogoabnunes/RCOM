@@ -20,19 +20,24 @@ int parseArgs(struct args *URL, char *command) {
     }
     else URL->host = strtok(NULL, "");
 
-    parseFilename(URL);
+    if (parseFilename(URL) != 0) {
+        printf("Error parsing filename.\n");
+        return 1;
+    }
 
     return 0;
 }
 
 int parseFilename(struct args *URL) {
   char fullpath[256];
+  char *filename;
   strcpy(fullpath, URL->path);
   char* token = strtok(fullpath, "/");
   while( token != NULL ) {
-    strcpy(URL->filename, token);
+    filename = token;
     token = strtok(NULL, "/");
   }
+  strcpy(URL->filename, filename);
   return 0;
 }
 
