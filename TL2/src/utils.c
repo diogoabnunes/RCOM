@@ -20,19 +20,24 @@ int parseArgs(struct args *URL, char *command) {
     }
     else URL->host = strtok(NULL, "");
 
-    parseFilename(URL);
+    if (parseFilename(URL) != 0) {
+        printf("Error parsing filename.\n");
+        return 1;
+    }
 
     return 0;
 }
 
 int parseFilename(struct args *URL) {
-    char fullpath[256];
+  char fullpath[256];
+  char *filename;
   strcpy(fullpath, URL->path);
   char* token = strtok(fullpath, "/");
   while( token != NULL ) {
-    URL->filename = token;
+    filename = token;
     token = strtok(NULL, "/");
   }
+  strcpy(URL->filename, filename);
   return 0;
 }
 
@@ -85,7 +90,6 @@ char* receiving(FILE * sockfile) {
     char *buf;
 	size_t bytes = 0;
 
-	// Sending username
 	while (1) {
 		getline(&buf, &bytes, sockfile);
 		printf("%s", buf);
@@ -125,6 +129,8 @@ int downloadFile(int sockfd, char *filename) {
         //printf("%s", buf);
         write(file_fd, buf, bytes);
     } while (bytes != 0);
+
+    close(file_fd);
 
     return 0;
 }
