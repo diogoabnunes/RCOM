@@ -4,21 +4,25 @@ int parseArgs(struct args *URL, char *command) {
 
     char* ftp = strtok(command, "/");   // ftp:
     char* remaining = strtok(NULL, "/");  // diogo:feup@ftp.up.pt
-    URL->path = strtok(NULL, "");      // path/to/destination/file.txt
+    char* path = strtok(NULL, "");      // path/to/destination/file.txt
 
     if (strcmp(ftp, "ftp:") != 0) { printf("Error parsing protocol: Expected ftp.\n"); return 1; }
     ftp[strlen(ftp) - 1] = '\0';
-    URL->protocol = ftp;
-    URL->user = strtok(remaining, ":");
-    URL->password = strtok(NULL, "@");
+
+    char *user = strtok(remaining, ":");
+    char *password = strtok(NULL, "@");
     
-    if (URL->password == NULL)
+    if (password == NULL)
     {
-        URL->user = "anonymous";
-        URL->password = "1234";
-        URL->host = remaining;
+        user = "anonymous";
+        password = "1234";
+        strcpy(URL->host, remaining);
     }
-    else URL->host = strtok(NULL, "");
+    else strcpy(URL->host, strtok(NULL, ""));
+
+    strcpy(URL->user, user);
+    strcpy(URL->password, password);
+    strcpy(URL->path, path);
 
     parseFilename(URL);
 
@@ -36,7 +40,7 @@ int parseFilename(struct args *URL) {
   return 0;
 }
 
-int getIPAddress(char *ip, char host[]) {
+int getIPAddress(char *ip, char *host) {
     struct hostent *h;
     if ((h = gethostbyname(host)) == NULL) {  
         herror("gethostbyname");
@@ -81,21 +85,42 @@ int sending(int sockfd, char *command) {
     return 0;
 }
 
-char* receiving(FILE * sockfile) {
+int receiving(FILE * sockfile) {
     char *buf;
 	size_t bytes = 0;
 
 	while (1) {
 		getline(&buf, &bytes, sockfile);
 		printf("%s", buf);
-		if (buf[3] == ' ') break;
+		if (buf[3] == ' ') { 
+            long code = strtol(buf, &buf, 10);
+            if (code == 530  || code == 550) {
+                printf("Error receiving command.\n");
+                return 1;
+            }
+            break; 
+        }
 	}
 
-    return buf;
+    return 0;
 }
 
-char* receivingPasvCommand(FILE* sockfile, char* serverIP, int *serverPort) {
-    char *buf = receiving(sockfile);
+int receivingPasvCommand(FILE* sockfile, char* serverIP, int *serverPort) {
+    char *buf;
+	size_t bytes = 0;
+
+	while (1) {
+		getline(&buf, &bytes, sockfile);
+		printf("%s", buf);
+		if (buf[3] == ' ') { 
+            long code = strtol(buf, &buf, 10);
+            if (code == 530  || code == 550) {
+                printf("Error receiving command.\n");
+                return 1;
+            }
+            break; 
+        }
+	}
 
     strtok(buf, "(");
 
@@ -110,7 +135,7 @@ char* receivingPasvCommand(FILE* sockfile, char* serverIP, int *serverPort) {
     char *port2 = strtok(NULL, ")");
     *serverPort = atoi(port1)*256 + atoi(port2);
 
-    return buf;
+    return 0;
 }
 
 int downloadFile(int sockfd, char *filename) {

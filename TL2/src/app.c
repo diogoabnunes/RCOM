@@ -10,7 +10,6 @@ int main(int argc, char *argv[]) {
 
 	struct args URL;
 	if (parseArgs(&URL, argv[1]) != 0) { printf("Error parsing arguments.\n"); return 1; }
-	printf("Protocol: %s\n", URL.protocol);
 	printf("User: %s\n", URL.user);
 	printf("Password: %s\n", URL.password);
 	printf("Host: %s\n", URL.host);
@@ -30,39 +29,39 @@ int main(int argc, char *argv[]) {
 	receiving(ftp.file);
 
 	// username
-	char userCommand[MAX];
+	char userCommand[256];
 	sprintf(userCommand, "user %s\r\n", URL.user);
 	sending(ftp.fd, userCommand);
-	receiving(ftp.file); // 331 Please specify the password.
+	if (receiving(ftp.file) != 0) return 5; // 331 Please specify the password.
 
 	// password
-	char passwordCommand[MAX];
+	char passwordCommand[256];
 	sprintf(passwordCommand, "pass %s\r\n", URL.password);
 	sending(ftp.fd, passwordCommand);
-	receiving(ftp.file); // 230 Login successful.
+	if (receiving(ftp.file) != 0) return 6; // 230 Login successful.
 
 	// pasv
-	char pasvCommand[MAX], ip[16]; int port;
+	char pasvCommand[256], ip[16]; int port;
 	sprintf(pasvCommand, "pasv\r\n");
 	sending(ftp.fd, pasvCommand);
 	receivingPasvCommand(ftp.file, ip, &port); // 227 Entering Passive Mode (193,137,29,15,port1,port2). -> port = port1 * 256 + port2
-	if (strcmp(ip, URL.IP) != 0) {printf("Error parsing pasv.\n"); return 5; }
+	if (strcmp(ip, URL.IP) != 0) {printf("Error parsing pasv.\n"); return 7; }
 
 	// Connecting to port server, waiting for connection
 	ftp.data_fd = openConnectSocketServer(URL.IP, port);
-	if (ftp.data_fd == -1) { printf("Error opening TCP socket.\n"); return 3; }
-	if (ftp.data_fd == -2) { printf("Error connecting to the server.\n"); return 4; }
+	if (ftp.data_fd == -1) { printf("Error opening TCP socket.\n"); return 8; }
+	if (ftp.data_fd == -2) { printf("Error connecting to the server.\n"); return 9; }
     //else printf("Connection estabilished in port %d.\n", port);
 
 	// retr
-	char retrCommand[MAX];
+	char retrCommand[256];
 	sprintf(retrCommand, "retr %s\r\n", URL.path);
 	sending(ftp.fd, retrCommand);
-	receiving(ftp.file); // 150 Opening BINARY mode data connection for pub/apache/HEADER.html (770 bytes).
+	if (receiving(ftp.file) != 0) return 10; // 150 Opening BINARY mode data connection for pub/apache/HEADER.html (770 bytes).
 
 	// Download file
 	if (downloadFile(ftp.data_fd, URL.filename) != 0) { printf("Error transfering file.\n"); return 5; }
-	receiving(ftp.file); // 226 Transfer complete.
+	if (receiving(ftp.file) != 0) return 11; // 226 Transfer complete.
 
 	return 0;
 }

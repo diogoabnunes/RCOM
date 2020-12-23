@@ -16,37 +16,33 @@
 #define FTP_PORT 21
 
 struct args {
-    char *protocol;
-    char *user;
-    char *password;
-    char *host;
-    char *path;
-    char *filename;
-    char *IP;
+    char user[MAX];
+    char password[MAX];
+    char host[MAX];
+    char path[MAX];
+    char filename[MAX];
+    char IP[MAX];
 };
 
 struct ftp {
     FILE *file;
     int fd;
-    FILE *data_file;
     int data_fd;
 };
-
-void clearVar(char *var);
 
 int parseArgs(struct args *URL, char *command);
 
 int parseFilename(struct args *URL);
 
-int getIPAddress(char *ip, char host[]);
+int getIPAddress(char *ip, char *host);
 
 int openConnectSocketServer(char *IP, int port);
 
 int sending(int sockfd, char *command);
 
-char* receiving(FILE * sockfile);
+int receiving(FILE * sockfile);
 
-char* receivingPasvCommand(FILE* sockfile, char* serverIP, int *serverPort);
+int receivingPasvCommand(FILE* sockfile, char* serverIP, int *serverPort);
 
 int downloadFile(int sockfd, char *filename);
 
