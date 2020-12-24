@@ -1,22 +1,44 @@
 # Experience 1 questions
 
 ## 1. What are the ARP packets and what are they used for?
-ARP stands for Address Resolution Protocol. ARP packets are used to get a MAC address, given an IP address. The RARP (Reverse ARP) does the opposite (gives an IP given a MAC).
+O ARP (Address Resolution Protocol) é um protocolo de comunicação cuja função é
+mapear um endereço de rede IP de uma máquina a um endereço físico MAC. Assim sendo,
+os pacotes ARP são usados para que o endereço IP do utilizador comunique com o
+endereço físico MAC correspondente ao endereço IP do destinatário.
 
 ## 2. What are the MAC and IP addresses of ARP packets and why?
-MAC stands for Medium Access Control, and IP is Internet Protocol. An IP address is a public identifier as a numerical label used by devices to communicate in a network using the Internet Protocol. A MAC address is a unique identifier that every network card has. It is used as a network address in the data link layer.
+Como a entrada da tabela ARP referente ao tuxy4 foi apagada, ao tentar enviar um
+pacote de tuxy3 para tuxy4, o tuxy3 não sabe o endereço MAC associado ao IP do tuxy4.
+Assim, o tuxy3 envia um pacote ARP em broadcast (para toda a rede local) com o seu
+endereço IP (172.16.40.1) e endereço MAC (00:21:5a:61:2f:13). O endereço MAC do tuxy4
+não se sabe, por isso tem o valor de 00:00:00:00:00:00.
+Por conseguinte, o tuxy4 envia um pacote ARP para o tuxy3 com os seus respectivos
+endereços IP (172.16.40.254) e MAC (00:21:5a:c3:78:76).
+Conclui-se que os pacotes ARP contêm os endereços IP e MAC das máquinas de
+origem e de destino dos pacotes em questão.
 
 ## 3. What packets does the ping command generate?
-The ping command sends Internet Control Message Protocol (ICMP) packets. It is used to evaluate the reachability of a host on the internet. The ping command measures the time for a round trip of a packet, reports packet loss, statistics, and errors.
+Este comando gera inicialmente pacotes ARP para obter o endereço MAC do
+destinatário, seguidos de pacotes ICMP (Internet Control Message Protocol).
 
 ## 4. What are the MAC and IP addresses of the ping packets?
-The IP and MAC addresses of the source and destination of ping request.
+Ao efetuar um ping do tuxy3 para o tuxy4, os endereços MAC e IP de origem e destino
+dos pacotes são: (página seguinte)
+Pacotes do pedido Origem Destinatário
+Endereço IP 172.16.40.1 172.16.40.254
+Endereço MAC 00:21:5a:61:2f:13 00:21:5a:c3:78:76
+Pacotes da resposta Origem Destinatário
+Endereço IP 172.16.40.254 172.16.40.1
+Endereço MAC 00:21:5a:c3:78:76 00:21:5a:61:2f:13
 
 ## 5. How to determine if a receiving Ethernet frame is ARP, IP, ICMP?
-In Ethernet II, by verifying the 2 bytes in the EtherType field right before the payload. The value there encodes a protocol (0x0800 for IPv4, 0x0806 for ARP, etc).
+Pode-se determinar uma trama do tipo Ethernet a partir dos bytes Type dessa trama:
+* caso este tenha o valor 0x0806, é uma trama do tipo ARP;
+* caso este tenha o valor 0x0800, é uma trama do tipo ICMP.
 
 ## 6. How to determine the length of a receiving frame?
-In IEEE 802.3, the EtherType field represents the length. In Ethernet II, the physical layer detects the end of a frame. In any case, it can be seen on Wireshark and on the terminal after executing the "ping" command.
+O comprimento de uma trama recebida é visível através do Wireshark.
 
 ## 7. What is the loopback interface and why is it important?
-The loopback interface is used to test if the network is well structured. The device sends itself a packet, which goes through every layer, and then returns.
+A interface loopback é uma interface virtual da rede que serve para verificar se a rede
+está corretamente configurada: é enviado um pacote de um endereço para um endereço de destino igual, se este for recebido então a rede está organizada.
